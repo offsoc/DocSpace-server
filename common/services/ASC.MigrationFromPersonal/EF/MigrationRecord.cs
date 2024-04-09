@@ -34,6 +34,7 @@ namespace ASC.MigrationFromPersonal.EF;
 
 public class MigrationRecord
 {
+    public int Id { get; set; }
     public string Email { get; set; }
     public MigrationStatus Status { get; set; }
     public string Alias { get; set; }
@@ -54,8 +55,9 @@ public static class MigrationRecordExtension
         modelBuilder.Entity<MigrationRecord>(entity =>
         {
             entity.ToTable("migrations")
-                .HasNoKey()
                 .HasCharSet("utf8");
+
+            entity.Property(e => e.Id).HasColumnName("id");
 
             entity.Property(e => e.Alias)
                 .HasColumnName("alias")

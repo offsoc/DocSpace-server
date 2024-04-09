@@ -57,6 +57,7 @@ public class MigrationCreator
     private readonly ModuleProvider _moduleProvider;
     private readonly IMapper _mapper;
     private readonly CreatorDbContext _creatorDbContext;
+    private readonly ILogger<MigrationCreator> _logger;
 
     private List<IModuleSpecifics> _modules;
     private string _pathToSave;
@@ -94,7 +95,8 @@ public class MigrationCreator
         StorageFactoryConfig storageFactoryConfig,
         ModuleProvider moduleProvider,
         IMapper mapper,
-        CreatorDbContext сreatorDbContext)
+        CreatorDbContext сreatorDbContext,
+        ILogger<MigrationCreator> logger)
     {
         _tenantDomainValidator = tenantDomainValidator;
         _tempStream = tempStream;
@@ -104,9 +106,10 @@ public class MigrationCreator
         _moduleProvider = moduleProvider;
         _mapper = mapper;
         _creatorDbContext = сreatorDbContext;
+        _logger = logger;
     }
 
-    public async Task<string> Create(string fromAlias, string mail, string toRegion, string toAlias)
+    public async Task<string> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias)
     {
         Init(fromAlias, mail, toRegion, toAlias);
 
@@ -228,10 +231,11 @@ public class MigrationCreator
             {
                 var tenantsModule = _moduleProvider.AllModules.Single(q => q.ModuleName == ModuleName.Tenants);
                 var coreUserTable = tenantsModule.Tables.Single(q => q.Name == "core_user");
-                await ArhiveTable(coreUserTable, writer, tenantsModule, connection, id);
+                await ArchiveTable(coreUserTable, writer, tenantsModule, connection, id);
             }
         }
 
+        _logger.LogDebug($"Archive tables");
         foreach (var module in _modules)
         {
             var tablesToProcess = module.Tables.Where(t => t.InsertMethod != InsertMethod.None).ToList();
@@ -248,15 +252,17 @@ public class MigrationCreator
                     {
                         continue;
                     }
-                    await ArhiveTable(table, writer, module, connection, id);
+                    _logger.LogDebug($"Archive table - {table.Name}");
+                    await ArchiveTable(table, writer, module, connection, id);
                 }
             }
         }
+        _logger.LogDebug($"Archive tables end");
     }
 
-    private async Task ArhiveTable(TableInfo table, IDataWriteOperator writer, IModuleSpecifics module, DbConnection connection, Guid id)
+    private async Task ArchiveTable(TableInfo table, IDataWriteOperator writer, IModuleSpecifics module, DbConnection connection, Guid id)
     {
-        Console.WriteLine($"backup table {table.Name}");
+        _logger.LogDebug($"backup table {table.Name}");
         using (var data = new DataTable(table.Name))
         {
             try
@@ -324,7 +330,7 @@ public class MigrationCreator
                 _tenantDomainValidator.ValidateDomainCharacters(NewAlias);
                 if (aliases.Contains(NewAlias))
                 {
-                    throw new Exception($"Alias is busy");
+                    throw new Exception($"Alias {NewAlias} is busy");
                 }
                 break;
             }
@@ -338,7 +344,7 @@ public class MigrationCreator
                 {
                     NewAlias = $"DocSpace{NewAlias}";
                 }
-                Console.WriteLine(ex.Message);
+                _logger.LogDebug(ex.Message);
             }
             catch (Exception ex)
             {
@@ -352,10 +358,10 @@ public class MigrationCreator
                     NewAlias = NewAlias + 1;
                 }
 
-                Console.WriteLine(ex.Message);
+                _logger.LogDebug(ex.Message);
             }
         }
-        Console.WriteLine($"Alias is - {NewAlias}");
+        _logger.LogDebug($"Alias is - {NewAlias}");
         data.Rows[0]["alias"] = NewAlias;
     }
 
@@ -391,11 +397,11 @@ public class MigrationCreator
 
     private async Task DoMigrationStorage(Guid id, IDataWriteOperator writer)
     {
-        Console.WriteLine($"start backup storage");
+        _logger.LogDebug($"start backup storage");
         var fileGroups = await GetFilesGroup(id);
         foreach (var group in fileGroups)
         {
-            Console.WriteLine($"start backup fileGroup: {group.Key}");
+            _logger.LogDebug($"start backup fileGroup: {group.Key}");
             foreach (var file in group)
             {
                 var storage = await _storageFactory.GetStorageAsync(_fromTenantId, group.Key);
@@ -407,7 +413,7 @@ public class MigrationCreator
                     await writer.WriteEntryAsync(file1.GetZipKey(), fileStream, () => Task.CompletedTask);
                 }, file, 5);
             }
-            Console.WriteLine($"end backup fileGroup: {group.Key}");
+            _logger.LogDebug($"end backup fileGroup: {group.Key}");
         }
 
         var restoreInfoXml = new XElement(
@@ -421,7 +427,7 @@ public class MigrationCreator
             restoreInfoXml.WriteTo(tmpFile);
             await writer.WriteEntryAsync(KeyHelper.GetStorageRestoreInfoZipKey(), tmpFile, () => Task.CompletedTask);
         }
-        Console.WriteLine($"end backup storage");
+        _logger.LogDebug($"end backup storage");
     }
 
     private async Task<List<IGrouping<string, BackupFileInfo>>> GetFilesGroup(Guid id)
@@ -473,11 +479,11 @@ public class MigrationCreator
 
         if (files.Any())
         {
-            Console.WriteLine($"file {dbFile.Id} found");
+            _logger.LogDebug($"file {dbFile.Id} found");
         }
         else
         {
-            Console.WriteLine($"file {dbFile.Id} not found");
+            _logger.LogDebug($"file {dbFile.Id} not found");
         }
     }
 

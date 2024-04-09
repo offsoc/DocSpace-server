@@ -27,6 +27,7 @@
 using System.Xml.Linq;
 
 using ASC.Common;
+using ASC.Common.Log;
 using ASC.Core.Common.EF;
 using ASC.Core.Common.EF.Context;
 using ASC.Core.Tenants;
@@ -34,6 +35,8 @@ using ASC.Data.Backup.Tasks;
 using ASC.Data.Backup.Tasks.Modules;
 using ASC.Data.Storage;
 using ASC.Data.Storage.DataOperators;
+
+using Microsoft.EntityFrameworkCore;
 
 namespace ASC.MigrationFromPersonal.Core;
 
@@ -76,7 +79,7 @@ public class MigrationRunner
         _creatorDbContext = creatorDbContext;
     }
 
-    public async Task Run(string backupFile, string region, string fromAlias, string toAlias)
+    public async Task<string> RunAsync(string backupFile, string region, string fromAlias, string toAlias)
     {
         _region = region;
         _modules = _moduleProvider.AllModules.Where(m => _namesModules.Contains(m.ModuleName)).ToList();
@@ -97,11 +100,11 @@ public class MigrationRunner
         {
             foreach (var module in _modules)
             {
-                Console.WriteLine($"start restore module: {module}");
+                _logger.Debug($"start restore module: {module}");
                 var restoreTask = new RestoreDbModuleTask(_logger, module, dataReader, columnMapper, _dbFactory, false, false, _region, _storageFactory, _storageFactoryConfig, _moduleProvider);
 
                 await restoreTask.RunJob();
-                Console.WriteLine($"end restore module: {module}");
+                _logger.Debug($"end restore module: {module}");
             }
 
             await DoRestoreStorage(dataReader, columnMapper);
@@ -109,6 +112,10 @@ public class MigrationRunner
             SetTenantActiveaAndTenantOwner(columnMapper.GetTenantMapping());
             SetAdmin(columnMapper.GetTenantMapping());
         }
+        using var dbContextTenantRegion = _creatorDbContext.CreateDbContext<TenantDbContext>(_region);
+        var tenantId = columnMapper.GetTenantMapping();
+        var tenant = await dbContextTenantRegion.Tenants.SingleAsync(t => t.Id == tenantId);
+        return tenant.Alias;
     }
 
     private async Task DoRestoreStorage(IDataReadOperator dataReader, ColumnMapper columnMapper)
@@ -117,7 +124,7 @@ public class MigrationRunner
 
         foreach (var group in fileGroups)
         {
-            Console.WriteLine($"start restore fileGroup: {group.Key}");
+            _logger.Debug($"start restore fileGroup: {group.Key}");
             foreach (var file in group)
             {
                 var storage = await _storageFactory.GetStorageAsync(columnMapper.GetTenantMapping(), group.Key, _region);
@@ -144,7 +151,7 @@ public class MigrationRunner
                     }
                 }
             }
-            Console.WriteLine($"end restore fileGroup: {group.Key}");
+            _logger.Debug($"end restore fileGroup: {group.Key}");
         }
     }
 
@@ -168,7 +175,7 @@ public class MigrationRunner
 
         var tenant = dbContextTenant.Tenants.Single(t => t.Id == tenantId);
         tenant.Status = TenantStatus.Active;
-        Console.WriteLine("set tenant status");
+        _logger.Debug("set tenant status");
         tenant.LastModified = DateTime.UtcNow;
         tenant.StatusChanged = DateTime.UtcNow;
         if (!dbContextUser.Users.Any(q => q.Id == tenant.OwnerId))
@@ -176,7 +183,7 @@ public class MigrationRunner
 
             var user = dbContextUser.Users.Single(u => u.TenantId == tenantId);
             tenant.OwnerId = user.Id;
-            Console.WriteLine($"set ownerId {user.Id}");
+            _logger.Debug($"set ownerId {user.Id}");
         }
         dbContextTenant.Tenants.Update(tenant);
         dbContextTenant.SaveChanges();

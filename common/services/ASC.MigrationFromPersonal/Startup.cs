@@ -97,8 +97,8 @@ public class Startup
 
         _diHelper.TryAdd<MigrationCreator>();
         _diHelper.TryAdd<MigrationRunner>();
-        _diHelper.TryAdd<MigrationFromPersonalService>();
-        services.AddHostedService<MigrationFromPersonalService>();
+        _diHelper.TryAdd<MigrationService>();
+        services.AddHostedService<MigrationService>();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

@@ -26,6 +26,7 @@
 
 
 using ASC.Common;
+using ASC.Common.Log;
 using ASC.MigrationFromPersonal.Core;
 using ASC.MigrationFromPersonal.EF;
 
@@ -34,7 +35,10 @@ using Microsoft.EntityFrameworkCore;
 namespace ASC.MigrationFromPersonal;
 
 [Singleton]
-public class MigrationFromPersonalService(IServiceProvider serviceProvider, IConfiguration configuration, IDbContextFactory<MigrationContext> dbContextFactory) : BackgroundService
+public class MigrationService(IServiceProvider serviceProvider,
+    IConfiguration configuration,
+    IDbContextFactory<MigrationContext> dbContextFactory,
+    ILogger<MigrationService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -50,11 +54,13 @@ public class MigrationFromPersonalService(IServiceProvider serviceProvider, ICon
 
             try
             {
+                logger.Debug($"user - {migration.Email} start migration");
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
-                var fileName = await migrationCreator.Create(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
+                var fileName = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
 
+                logger.Debug($"end creator and start runner");
                 var migrationRunner = serviceProvider.GetService<MigrationRunner>();
-                await migrationRunner.Run(fileName, configuration["toRegion"], configuration["fromAlias"], "");
+                var alias = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "");
             
 
                 Directory.GetFiles(AppContext.BaseDirectory).Where(f => f.Equals(fileName)).ToList().ForEach(File.Delete);
@@ -64,10 +70,19 @@ public class MigrationFromPersonalService(IServiceProvider serviceProvider, ICon
                     Directory.Delete(AppContext.BaseDirectory + "\\temp");
                 }
 
+                migration.Status = MigrationStatus.Success;
+                migration.Alias = alias;
+                logger.Debug($"user - {migration.Email} migrated to {alias}");
             }
             catch (Exception e)
             {
-
+                migration.Status = MigrationStatus.Error;
+                logger.ErrorWithException($"user - {migration.Email} error", e);
+            }
+            finally
+            {
+                context.Update(migration);
+                await context.SaveChangesAsync();
             }
         }
     }

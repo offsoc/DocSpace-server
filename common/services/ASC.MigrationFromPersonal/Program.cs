@@ -39,9 +39,17 @@ builder.Configuration.AddJsonFile($"appsettings.json", true)
                      .AddEnvironmentVariables()
                      .AddCommandLine(args);
 
+var logger = LogManager.Setup()
+                            .SetupExtensions(s =>
+                            {
+                                s.RegisterLayoutRenderer("application-context", _ => AppName);
+                            })
+                            .LoadConfiguration(builder.Configuration, builder.Environment)
+                            .GetLogger(typeof(Startup).Namespace);
+
 try
 {
-
+    logger.Info("Configuring web host ({applicationContext})...", AppName);
     builder.Host.ConfigureDefault();
 
     var startup = new Startup(builder.Configuration, builder.Environment);
