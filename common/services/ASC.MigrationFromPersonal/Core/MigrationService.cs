@@ -48,7 +48,7 @@ public class MigrationService(IServiceProvider serviceProvider,
             var migration = await context.Migrations.FirstOrDefaultAsync(m => m.Status == MigrationStatus.Pending);
             if (migration == null)
             {
-                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
                 continue;
             }
 
