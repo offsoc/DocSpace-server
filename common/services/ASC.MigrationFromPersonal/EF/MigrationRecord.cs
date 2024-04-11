@@ -34,8 +34,10 @@ namespace ASC.MigrationFromPersonal.EF;
 
 public class MigrationRecord
 {
-    public int Id { get; set; }
     public string Email { get; set; }
+    public DateTime RequestDate { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
     public MigrationStatus Status { get; set; }
     public string Alias { get; set; }
 }
@@ -54,19 +56,35 @@ public static class MigrationRecordExtension
     {
         modelBuilder.Entity<MigrationRecord>(entity =>
         {
-            entity.ToTable("migrations")
+            entity.HasKey(e => new { e.Email })
+                .HasName("PRIMARY");
+
+            entity.ToTable("personal_to_docspace_request")
                 .HasCharSet("utf8");
 
-            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.RequestDate)
+                .IsRequired()
+                .HasColumnName("request_date")
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.StartDate)
+                .IsRequired()
+                .HasColumnName("migration_start_date")
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.EndDate)
+                .IsRequired()
+                .HasColumnName("migration_end_date")
+                .HasColumnType("datetime");
 
             entity.Property(e => e.Alias)
                 .HasColumnName("alias")
-                .HasColumnType("varchar(255)")
+                .HasColumnType("varchar(100)")
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
 
             entity.Property(e => e.Status)
-                .HasColumnName("status");
+                .HasColumnName("migration_status");
 
             entity.Property(e => e.Email)
                 .HasColumnName("email")

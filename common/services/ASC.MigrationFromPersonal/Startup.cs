@@ -60,7 +60,6 @@ public class Startup
 
     public async Task ConfigureServicesAsync(IServiceCollection services)
     {
-        RegionSettings.SetCurrent(_configuration["fromRegion"]);
         services.RegisterFeature()
              .AddScoped<EFLoggerFactory>()
              .AddSingleton<IHttpContextAccessor, HttpContextAccessor>()

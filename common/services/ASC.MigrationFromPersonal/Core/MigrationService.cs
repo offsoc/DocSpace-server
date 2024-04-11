@@ -42,18 +42,22 @@ public class MigrationService(IServiceProvider serviceProvider,
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await using var context = await dbContextFactory.CreateDbContextAsync();
         while (!stoppingToken.IsCancellationRequested)
         {
-            await using var context = await dbContextFactory.CreateDbContextAsync();
-            var migration = await context.Migrations.FirstOrDefaultAsync(m => m.Status == MigrationStatus.Pending);
+            var migration = await context.Migrations.OrderBy(m => m.RequestDate).FirstOrDefaultAsync(m => m.Status == MigrationStatus.Pending);
             if (migration == null)
             {
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
                 continue;
             }
 
+            migration.Status = MigrationStatus.InWork;
+            migration.StartDate = DateTime.Now;
+
             try
             {
+                RegionSettings.SetCurrent(configuration["fromRegion"]);
                 logger.Debug($"user - {migration.Email} start migration");
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
                 var fileName = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
@@ -62,7 +66,6 @@ public class MigrationService(IServiceProvider serviceProvider,
                 var migrationRunner = serviceProvider.GetService<MigrationRunner>();
                 var alias = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "");
             
-
                 Directory.GetFiles(AppContext.BaseDirectory).Where(f => f.Equals(fileName)).ToList().ForEach(File.Delete);
 
                 if (Directory.Exists(AppContext.BaseDirectory + "\\temp"))
@@ -81,6 +84,8 @@ public class MigrationService(IServiceProvider serviceProvider,
             }
             finally
             {
+                RegionSettings.SetCurrent("");
+                migration.EndDate = DateTime.Now;
                 context.Update(migration);
                 await context.SaveChangesAsync();
             }

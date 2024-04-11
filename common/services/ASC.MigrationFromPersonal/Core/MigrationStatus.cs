@@ -29,6 +29,7 @@ namespace ASC.MigrationFromPersonal.Core;
 public enum MigrationStatus
 {
     Pending,
+    InWork,
     Success,
     Error
 }

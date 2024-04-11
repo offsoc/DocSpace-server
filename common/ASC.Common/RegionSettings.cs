@@ -31,13 +31,6 @@ public static class RegionSettings
 
     public static void SetCurrent(string current)
     {
-        if (Current == "")
-        {
-            Current = $"regions:{current}:";
-        }
-        else
-        {
-            throw new ArgumentException("current region already set");
-        }
+        Current = $"regions:{current}:";
     }
 }
