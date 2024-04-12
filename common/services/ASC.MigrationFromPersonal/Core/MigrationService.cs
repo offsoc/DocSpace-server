@@ -54,6 +54,8 @@ public class MigrationService(IServiceProvider serviceProvider,
 
             migration.Status = MigrationStatus.InWork;
             migration.StartDate = DateTime.Now;
+            context.Update(migration);
+            await context.SaveChangesAsync();
 
             try
             {
