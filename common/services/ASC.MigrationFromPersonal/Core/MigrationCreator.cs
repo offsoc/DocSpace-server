@@ -248,7 +248,8 @@ public class MigrationCreator
                         table.Name == "files_thirdparty_account" ||
                         table.Name == "files_thirdparty_id_mapping" ||
                         table.Name == "core_subscription" ||
-                        table.Name == "files_security")
+                        table.Name == "files_security" ||
+                        table.Name == "tenants_quotarow")
                     {
                         continue;
                     }
@@ -289,6 +290,7 @@ public class MigrationCreator
                 {
                     ChangeAlias(data);
                     ChangeName(data);
+                    ChangeIndustry(data);
                 }
 
                 if (data.TableName == "files_bunch_objects")
@@ -381,6 +383,11 @@ public class MigrationCreator
     private void ChangeName(DataTable data)
     {
         data.Rows[0]["name"] = "";
+    }
+
+    private void ChangeIndustry(DataTable data)
+    {
+        data.Rows[0]["industry"] = "0";
     }
 
     private void ClearCommonBunch(DataTable data)

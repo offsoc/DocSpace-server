@@ -57,7 +57,7 @@ public class DbTenant : IMapFrom<Tenant>
     public DateTime CreationDateTime { get; set; }
     public Guid? OwnerId { get; set; }
     public string PaymentId { get; set; }
-    public TenantIndustry Industry { get; set; }
+    //public TenantIndustry Industry { get; set; }
     public DateTime LastModified { get; set; }
     public bool Spam { get; set; }
     public bool Calls { get; set; }
@@ -163,10 +163,10 @@ public static class DbTenantExtension
                 .HasColumnName("creationdatetime")
                 .HasColumnType("datetime");
 
-            entity.Property(e => e.Industry)
-                .HasColumnName("industry")
-                .IsRequired()
-                .HasDefaultValueSql("'0'");
+            //entity.Property(e => e.Industry)
+            //    .HasColumnName("industry")
+           //     .IsRequired()
+           //     .HasDefaultValueSql("'0'");
 
             entity.Property(e => e.Language)
                 .IsRequired()
@@ -281,7 +281,7 @@ public static class DbTenantExtension
 
             entity.Property(e => e.CreationDateTime).HasColumnName("creationdatetime");
 
-            entity.Property(e => e.Industry).HasColumnName("industry");
+            //entity.Property(e => e.Industry).HasColumnName("industry");
 
             entity.Property(e => e.Language)
                 .IsRequired()
