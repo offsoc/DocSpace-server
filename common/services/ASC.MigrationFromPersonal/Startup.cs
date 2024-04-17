@@ -32,10 +32,13 @@ using ASC.Core.Common.EF;
 using ASC.Core.Common.EF.Context;
 using ASC.Core.Common.Hosting;
 using ASC.Data.Backup.EF.Context;
+using ASC.Data.Storage;
 using ASC.EventBus.Abstractions;
 using ASC.EventBus.Extensions.Logger;
 using ASC.Feed.Context;
 using ASC.Files.Core.EF;
+using ASC.Files.Core.Security;
+using ASC.Files.Core.VirtualRooms;
 using ASC.MessagingSystem.EF.Context;
 using ASC.MigrationFromPersonal.Core;
 using ASC.MigrationFromPersonal.EF;
@@ -100,6 +103,9 @@ public class Startup
         _diHelper.TryAdd<MigrationCreator>();
         _diHelper.TryAdd<MigrationRunner>();
         _diHelper.TryAdd<MigrationService>();
+        _diHelper.TryAdd<RoomLogoValidator>();
+        _diHelper.TryAdd<FileValidator>();
+        _diHelper.TryAdd<FileSecurity>();
         services.AddHostedService<MigrationService>();
     }
 
