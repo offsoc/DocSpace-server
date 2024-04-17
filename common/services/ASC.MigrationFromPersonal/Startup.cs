@@ -60,6 +60,8 @@ public class Startup
 
     public async Task ConfigureServicesAsync(IServiceCollection services)
     {
+        var connectionMultiplexer = await services.GetRedisConnectionMultiplexerAsync(_configuration, GetType().Namespace);
+
         services.RegisterFeature()
              .AddScoped<EFLoggerFactory>()
              .AddSingleton<IHttpContextAccessor, HttpContextAccessor>()
@@ -83,6 +85,7 @@ public class Startup
              .AddMemoryCache()
              .AddSingleton<IEventBus, MockEventBusRabbitMQ>()
              .AddCacheNotify(_configuration)
+             .AddDistributedCache(connectionMultiplexer)
              .AddDistributedLock(_configuration);
 
         var redisConfiguration = _configuration.GetSection("Redis").Get<RedisConfiguration>();
