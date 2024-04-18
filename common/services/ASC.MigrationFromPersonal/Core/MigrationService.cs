@@ -25,13 +25,6 @@
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
 
-using ASC.Common;
-using ASC.Common.Log;
-using ASC.MigrationFromPersonal.Core;
-using ASC.MigrationFromPersonal.EF;
-
-using Microsoft.EntityFrameworkCore;
-
 namespace ASC.MigrationFromPersonal;
 
 [Singleton]

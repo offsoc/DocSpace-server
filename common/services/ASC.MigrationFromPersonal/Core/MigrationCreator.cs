@@ -24,26 +24,6 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
-using ASC.Common;
-using ASC.Core.Common.EF.Context;
-using ASC.Core.Common.EF;
-using ASC.Core.Tenants;
-using ASC.Core.Users;
-using ASC.Data.Backup.Tasks.Data;
-using ASC.Data.Backup.Tasks.Modules;
-using ASC.Data.Backup.Tasks;
-using ASC.Data.Storage.DataOperators;
-using ASC.Data.Storage;
-using ASC.Files.Core.EF;
-using AutoMapper;
-using System.Data.Common;
-using System.Data;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using AutoMapper.QueryableExtensions;
-using ASC.Data.Backup.Extensions;
-using MySql.Data.MySqlClient;
-
 namespace ASC.MigrationFromPersonal;
 
 [Scope]

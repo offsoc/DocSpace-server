@@ -24,20 +24,6 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
-using System.Xml.Linq;
-
-using ASC.Common;
-using ASC.Common.Log;
-using ASC.Core.Common.EF;
-using ASC.Core.Common.EF.Context;
-using ASC.Core.Tenants;
-using ASC.Data.Backup.Tasks;
-using ASC.Data.Backup.Tasks.Modules;
-using ASC.Data.Storage;
-using ASC.Data.Storage.DataOperators;
-
-using Microsoft.EntityFrameworkCore;
-
 namespace ASC.MigrationFromPersonal.Core;
 
 
