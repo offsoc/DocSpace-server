@@ -393,12 +393,14 @@ public class MigrationCreator
             {
                 var storage = await _storageFactory.GetStorageAsync(_fromTenantId, group.Key);
                 var file1 = file;
-                await ActionInvoker.TryAsync(async state =>
+                await ActionInvoker.TryAsync(async (state, logger) =>
                 {
                     var f = (BackupFileInfo)state;
+                    logger.LogDebug($"start backup file: {f.Path}");
                     using var fileStream = await storage.GetReadStreamAsync(f.Domain, f.Path);
                     await writer.WriteEntryAsync(file1.GetZipKey(), fileStream, () => Task.CompletedTask);
-                }, file, 5);
+                    logger.LogDebug($"end backup file: {f.Path}");
+                }, file, _logger, 5, onFailure: error => _logger.WarningWithException("file can not backup", error));
             }
             _logger.LogDebug($"end backup fileGroup: {group.Key}");
         }
