@@ -180,17 +180,25 @@ public class MigrationRunner
     {
         await using var coreDbContext = _creatorDbContext.CreateDbContext<CoreDbContext>(_region);
         var stamp = DateTime.MaxValue;
-
         stamp = stamp.Date.Add(new TimeSpan(DateTime.MaxValue.Hour, DateTime.MaxValue.Minute, DateTime.MaxValue.Second));
 
         var tariff = new DbTariff();
         tariff.TenantId = tenantId;
-        tariff.Id = - tenantId;
+        tariff.Id = -tenantId;
         tariff.Stamp = stamp;
         tariff.CreateOn = DateTime.UtcNow;
         tariff.CustomerId = "";
 
         await coreDbContext.AddAsync(tariff);
+
+        var tariffRow = new DbTariffRow();
+        tariffRow.TenantId = tenantId;
+        tariffRow.TariffId = -tenantId;
+        tariffRow.Quota = -1;
+        tariffRow.Quantity = 1;
+
+        await coreDbContext.AddAsync(tariffRow);
+
         await coreDbContext.SaveChangesAsync();
     }
     
