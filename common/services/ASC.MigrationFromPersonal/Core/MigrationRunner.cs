@@ -97,6 +97,7 @@ public class MigrationRunner
 
             SetTenantActiveaAndTenantOwner(columnMapper.GetTenantMapping());
             SetAdmin(columnMapper.GetTenantMapping());
+            await SetTariffAsync(columnMapper.GetTenantMapping());
         }
         using var dbContextTenantRegion = _creatorDbContext.CreateDbContext<TenantDbContext>(_region);
         var tenantId = columnMapper.GetTenantMapping();
@@ -175,6 +176,24 @@ public class MigrationRunner
         dbContextTenant.SaveChanges();
     }
 
+    private async Task SetTariffAsync(int tenantId)
+    {
+        await using var coreDbContext = _creatorDbContext.CreateDbContext<CoreDbContext>(_region);
+        var stamp = DateTime.MaxValue;
+
+        stamp = stamp.Date.Add(new TimeSpan(DateTime.MaxValue.Hour, DateTime.MaxValue.Minute, DateTime.MaxValue.Second));
+
+        var tariff = new DbTariff();
+        tariff.TenantId = tenantId;
+        tariff.Id = - tenantId;
+        tariff.Stamp = stamp;
+        tariff.CreateOn = DateTime.UtcNow;
+        tariff.CustomerId = "";
+
+        await coreDbContext.AddAsync(tariff);
+        await coreDbContext.SaveChangesAsync();
+    }
+    
     private void SetAdmin(int tenantId)
     {
         using var dbContextTenant = _creatorDbContext.CreateDbContext<TenantDbContext>(_region);
