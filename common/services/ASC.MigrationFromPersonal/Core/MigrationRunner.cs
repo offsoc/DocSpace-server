@@ -194,7 +194,7 @@ public class MigrationRunner
         var tariffRow = new DbTariffRow();
         tariffRow.TenantId = tenantId;
         tariffRow.TariffId = -tenantId;
-        tariffRow.Quota = -1;
+        tariffRow.Quota = -3;
         tariffRow.Quantity = 1;
 
         await coreDbContext.AddAsync(tariffRow);

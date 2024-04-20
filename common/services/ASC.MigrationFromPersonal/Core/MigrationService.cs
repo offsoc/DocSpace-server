@@ -25,6 +25,8 @@
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
 
+using ASC.Core.Common.EF;
+
 namespace ASC.MigrationFromPersonal;
 
 [Singleton]
@@ -54,6 +56,7 @@ public class MigrationService(IServiceProvider serviceProvider,
             {
                 RegionSettings.SetCurrent(configuration["fromRegion"]);
                 logger.Debug($"user - {migration.Email} start migration");
+                
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
                 var fileName = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
 

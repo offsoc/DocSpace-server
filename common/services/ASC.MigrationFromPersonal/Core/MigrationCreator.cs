@@ -24,6 +24,10 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
+using ASC.Core.Common.EF;
+
+using AutoMapper;
+
 namespace ASC.MigrationFromPersonal;
 
 [Scope]
@@ -94,6 +98,7 @@ public class MigrationCreator
         Init(fromAlias, mail, toRegion, toAlias);
 
         var id = GetUserId();
+        await CheckTotalSizeAsync(id);
         CheckCountManager();
         var fileName = _userName + ".tar.gz";
         var path = Path.Combine(_pathToSave, fileName);
@@ -178,6 +183,20 @@ public class MigrationCreator
         }
     }
 
+    private async Task CheckTotalSizeAsync(Guid userId)
+    {
+        await using var filesDbContext = _creatorDbContext.CreateDbContext<FilesDbContext>();
+        var totalSize = await filesDbContext.Files.Where(f => f.CreateBy == userId).SumAsync(f => f.ContentLength);
+
+        await using var coreDbContext = _creatorDbContext.CreateDbContext<CoreDbContext>(_toRegion);
+        var quota = _mapper.Map<DbQuota, TenantQuota>(await coreDbContext.Quotas.SingleOrDefaultAsync(r => r.TenantId == -3));
+
+        if(quota.MaxTotalSize < totalSize)
+        {
+            throw new ArgumentException("personal total size more than docspace totalsize");
+        }
+    }
+    
     private void CheckCountManager()
     {
         if (!string.IsNullOrEmpty(_toAlias))
@@ -201,7 +220,6 @@ public class MigrationCreator
             }
         }
     }
-
 
     private async Task DoMigrationDb(Guid id, IDataWriteOperator writer)
     {
