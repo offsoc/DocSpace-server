@@ -24,13 +24,16 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
+using ASC.Core.Common.EF;
+
 namespace ASC.MigrationFromPersonal;
 
 [Singleton]
 public class MigrationService(IServiceProvider serviceProvider,
     IConfiguration configuration,
     IDbContextFactory<MigrationContext> dbContextFactory,
-    ILogger<MigrationService> logger) : BackgroundService
+    ILogger<MigrationService> logger,
+    CreatorDbContext creatorDbContext) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -55,9 +58,13 @@ public class MigrationService(IServiceProvider serviceProvider,
                 logger.Debug($"user - {migration.Email} start migration");
                 
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
-                var fileName = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
+                (var fileName, var newAlias) = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
 
                 logger.Debug($"end creator and start runner");
+
+                using var dbContextTenant = creatorDbContext.CreateDbContext<TenantDbContext>(configuration["toRegion"]);
+                dbContextTenant.Tenants.Where(t=> t.Alias == newAlias && t.Status == TenantStatus.Suspended).ExecuteDelete();
+
                 var migrationRunner = serviceProvider.GetService<MigrationRunner>();
                 var alias = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "");
             

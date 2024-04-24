@@ -82,6 +82,7 @@ public class MigrationRunner
             columnMapper.SetMapping("tenants_tenants", "id", fromTenant.Id, toTenant.Id);
             columnMapper.Commit();
         }
+
         using (var dataReader = new ZipReadOperator(_backupFile))
         {
             foreach (var module in _modules)

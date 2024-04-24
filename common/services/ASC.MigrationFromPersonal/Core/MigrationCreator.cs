@@ -89,7 +89,7 @@ public class MigrationCreator
         _logger = logger;
     }
 
-    public async Task<string> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias)
+    public async Task<(string, string)> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias)
     {
         Init(fromAlias, mail, toRegion, toAlias);
 
@@ -103,7 +103,7 @@ public class MigrationCreator
             await DoMigrationDb(id, writer);
             await DoMigrationStorage(id, writer);
         }
-        return fileName;
+        return (fileName, NewAlias);
     }
 
     private void Init(string fromAlias, string mail, string toRegion, string toAlias)
@@ -313,7 +313,7 @@ public class MigrationCreator
         await writer.WriteEntryAsync(KeyHelper.GetTableZipKey(module, data.TableName), file, () => Task.CompletedTask);
     }
 
-    private void ChangeAlias(DataTable data)
+    private async void ChangeAlias(DataTable data)
     {
         var aliases = GetAliases();
         NewAlias = _userName;
@@ -359,6 +359,16 @@ public class MigrationCreator
         }
         _logger.LogDebug($"Alias is - {NewAlias}");
         data.Rows[0]["alias"] = NewAlias;
+
+        using var dbContextTenant = _creatorDbContext.CreateDbContext<TenantDbContext>(_toRegion);
+        var dbTenant = new DbTenant();
+        dbTenant.Alias = NewAlias;
+        dbTenant.Version = 2;
+        dbTenant.Name = "";
+        dbTenant.Status = TenantStatus.Suspended;
+        dbTenant.LastModified = DateTime.Now;
+        await dbContextTenant.Tenants.AddAsync(dbTenant);
+        await dbContextTenant.SaveChangesAsync();
     }
 
     private string RemoveInvalidCharacters(string alias)
