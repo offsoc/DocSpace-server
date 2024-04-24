@@ -316,7 +316,7 @@ public class MigrationCreator
     private async void ChangeAlias(DataTable data)
     {
         var aliases = GetAliases();
-        NewAlias = _userName;
+        NewAlias = _userName.ToLower();
         while (true)
         {
             try
@@ -381,7 +381,7 @@ public class MigrationCreator
         using var dbContext = _creatorDbContext.CreateDbContext<TenantDbContext>(_toRegion);
         var tenants = dbContext.Tenants.Select(t => t.Alias).ToList();
         var forbidens = dbContext.TenantForbiden.Select(tf => tf.Address).ToList();
-        return tenants.Union(forbidens).ToList();
+        return tenants.Union(forbidens).Select(t=> t.ToLower()).ToList();
     }
 
     private void ChangeName(DataTable data)
