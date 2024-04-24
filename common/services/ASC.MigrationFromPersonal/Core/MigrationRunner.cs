@@ -27,7 +27,7 @@
 namespace ASC.MigrationFromPersonal.Core;
 
 
-[Scope]
+[Transient]
 public class MigrationRunner
 {
     private readonly DbFactory _dbFactory;

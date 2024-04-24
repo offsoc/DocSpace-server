@@ -31,6 +31,13 @@ public static class RegionSettings
 
     public static void SetCurrent(string current)
     {
-        Current = $"regions:{current}:";
+        if (string.IsNullOrEmpty(current)) 
+        {
+            Current = "";
+        }
+        else
+        {
+            Current = $"regions:{current}:";
+        }
     }
 }
