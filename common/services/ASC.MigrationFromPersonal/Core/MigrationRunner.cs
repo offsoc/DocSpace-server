@@ -190,7 +190,7 @@ public class MigrationRunner
         tariff.CreateOn = DateTime.UtcNow;
         tariff.CustomerId = "";
 
-        await coreDbContext.AddAsync(tariff);
+        await coreDbContext.AddOrUpdateAsync(q => q.Tariffs, tariff);
 
         var tariffRow = new DbTariffRow();
         tariffRow.TenantId = tenantId;
@@ -198,7 +198,7 @@ public class MigrationRunner
         tariffRow.Quota = -3;
         tariffRow.Quantity = 1;
 
-        await coreDbContext.AddAsync(tariffRow);
+        await coreDbContext.AddOrUpdateAsync(q => q.TariffRows, tariffRow);
 
         await coreDbContext.SaveChangesAsync();
     }
