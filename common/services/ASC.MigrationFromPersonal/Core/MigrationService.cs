@@ -58,7 +58,7 @@ public class MigrationService(IServiceProvider serviceProvider,
                 logger.Debug($"user - {migration.Email} start migration");
                 
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
-                (var fileName, var newAlias) = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
+                (var fileName, var newAlias, var totalSize) = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
 
                 logger.Debug($"end creator and start runner");
 
@@ -66,7 +66,7 @@ public class MigrationService(IServiceProvider serviceProvider,
                 dbContextTenant.Tenants.Where(t=> t.Alias == newAlias && t.Status == TenantStatus.Suspended).ExecuteDelete();
 
                 var migrationRunner = serviceProvider.GetService<MigrationRunner>();
-                var alias = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "");
+                var alias = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "", totalSize);
             
                 Directory.GetFiles(AppContext.BaseDirectory).Where(f => f.Equals(fileName)).ToList().ForEach(File.Delete);
 

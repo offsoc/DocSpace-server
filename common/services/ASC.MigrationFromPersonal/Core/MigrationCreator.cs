@@ -38,6 +38,7 @@ public class MigrationCreator
     private readonly IMapper _mapper;
     private readonly CreatorDbContext _creatorDbContext;
     private readonly ILogger<MigrationCreator> _logger;
+    private long _totalSize;
 
     private List<IModuleSpecifics> _modules;
     private string _pathToSave;
@@ -89,7 +90,7 @@ public class MigrationCreator
         _logger = logger;
     }
 
-    public async Task<(string, string)> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias)
+    public async Task<(string, string, long)> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias)
     {
         Init(fromAlias, mail, toRegion, toAlias);
 
@@ -103,7 +104,7 @@ public class MigrationCreator
             await DoMigrationDb(id, writer);
             await DoMigrationStorage(id, writer);
         }
-        return (fileName, NewAlias);
+        return (fileName, NewAlias, _totalSize);
     }
 
     private void Init(string fromAlias, string mail, string toRegion, string toAlias)
@@ -182,12 +183,12 @@ public class MigrationCreator
     private async Task CheckTotalSizeAsync(Guid userId)
     {
         await using var filesDbContext = _creatorDbContext.CreateDbContext<FilesDbContext>();
-        var totalSize = await filesDbContext.Files.Where(f => f.CreateBy == userId).SumAsync(f => f.ContentLength);
+        _totalSize = await filesDbContext.Files.Where(f => f.CreateBy == userId).SumAsync(f => f.ContentLength);
 
         await using var coreDbContext = _creatorDbContext.CreateDbContext<CoreDbContext>(_toRegion);
         var quota = _mapper.Map<DbQuota, TenantQuota>(await coreDbContext.Quotas.SingleOrDefaultAsync(r => r.TenantId == -3));
 
-        if(quota.MaxTotalSize < totalSize)
+        if(quota.MaxTotalSize < _totalSize)
         {
             throw new ArgumentException("personal total size more than docspace totalsize");
         }

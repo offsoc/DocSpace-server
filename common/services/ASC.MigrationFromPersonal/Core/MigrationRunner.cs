@@ -36,6 +36,7 @@ public class MigrationRunner
     private readonly ModuleProvider _moduleProvider;
     private readonly ILogger<RestoreDbModuleTask> _logger;
     private readonly CreatorDbContext _creatorDbContext;
+    private long _totalSize;
 
     private string _backupFile;
     private string _region;
@@ -65,8 +66,9 @@ public class MigrationRunner
         _creatorDbContext = creatorDbContext;
     }
 
-    public async Task<string> RunAsync(string backupFile, string region, string fromAlias, string toAlias)
+    public async Task<string> RunAsync(string backupFile, string region, string fromAlias, string toAlias, long totalSize)
     {
+        _totalSize = totalSize;
         _region = region;
         _modules = _moduleProvider.AllModules.Where(m => _namesModules.Contains(m.ModuleName)).ToList();
         _backupFile = backupFile;
@@ -96,6 +98,7 @@ public class MigrationRunner
 
             await DoRestoreStorage(dataReader, columnMapper);
 
+            SetQuotarow(columnMapper.GetTenantMapping());
             SetTenantActiveaAndTenantOwner(columnMapper.GetTenantMapping());
             SetAdmin(columnMapper.GetTenantMapping());
             await SetTariffAsync(columnMapper.GetTenantMapping());
@@ -154,6 +157,21 @@ public class MigrationRunner
         var restoreInfo = XElement.Load(new StreamReader(stream));
 
         return restoreInfo.Elements("file").Select(BackupFileInfo.FromXElement).ToList();
+    }
+
+    private void SetQuotarow(int tenantId)
+    {
+        using var coreDbContext = _creatorDbContext.CreateDbContext<CoreDbContext>(_region);
+
+        var row = new DbQuotaRow();
+        row.TenantId = tenantId;
+        row.Path = "/files/";
+        row.UserId = Guid.Empty;
+        row.Counter = _totalSize;
+        row.Tag = "e67be73d-f9ae-4ce1-8fec-1880cb518cb4";
+        row.LastModified = DateTime.UtcNow;
+        coreDbContext.AddOrUpdate(coreDbContext.QuotaRows, row);
+        coreDbContext.SaveChanges();
     }
 
     private void SetTenantActiveaAndTenantOwner(int tenantId)
