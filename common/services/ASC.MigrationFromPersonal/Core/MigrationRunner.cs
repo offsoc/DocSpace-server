@@ -192,6 +192,9 @@ public class MigrationRunner
 
         await coreDbContext.AddOrUpdateAsync(q => q.Tariffs, tariff);
 
+        var tariffs = coreDbContext.TariffRows.Where(t => t.TenantId == tenantId);
+        coreDbContext.TariffRows.RemoveRange(tariffs);
+
         var tariffRow = new DbTariffRow();
         tariffRow.TenantId = tenantId;
         tariffRow.TariffId = -tenantId;
