@@ -182,6 +182,7 @@ public class MigrationRunner
         var tenant = dbContextTenant.Tenants.Single(t => t.Id == tenantId);
         tenant.Status = TenantStatus.Active;
         _logger.Debug("set tenant status");
+        tenant.CreationDateTime = DateTime.UtcNow;
         tenant.LastModified = DateTime.UtcNow;
         tenant.StatusChanged = DateTime.UtcNow;
         if (!dbContextUser.Users.Any(q => q.Id == tenant.OwnerId))
