@@ -24,8 +24,6 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
-using System.Web;
-
 namespace ASC.MessagingSystem;
 
 public class MessageSettings
@@ -35,6 +33,8 @@ public class MessageSettings
     private const string XRealIPHeader = "X-Real-IP";
     private const string EditorsUAHeader = "AscDesktopEditor";
     private const string EditorsName = "Desktop Editors";
+    private const string ZoomAppsUAHeader = "ZoomApps";
+    private const string ZoomBrowserUAHeader = "ZoomWebKit";
 
     static MessageSettings()
     {
@@ -143,16 +143,16 @@ public class MessageSettings
             return null;
         }
 
-        if (clientInfo.String.Contains(EditorsUAHeader))
+        if (TryGetCustomUAData(clientInfo.String, EditorsUAHeader, EditorsName, out var customBrowser))
         {
-            var data = clientInfo.String.Split(" ").FirstOrDefault(r=> r.StartsWith(EditorsUAHeader));
-            if (data != null)
-            {
-                var parts = data.Split("/");
-                return $"{EditorsName} {parts[1]}";
-            }
+            return customBrowser;
         }
-        
+
+        if (TryGetCustomUAData(clientInfo.String, ZoomBrowserUAHeader, ZoomBrowserUAHeader, out customBrowser))
+        {
+            return customBrowser;
+        }
+
         return $"{clientInfo.UA.Family} {clientInfo.UA.Major}".Trim();
     }
 
@@ -162,7 +162,32 @@ public class MessageSettings
         {
             return null;
         }
-        
+
+        if (TryGetCustomUAData(clientInfo.String, ZoomAppsUAHeader, ZoomAppsUAHeader, out var customDevice))
+        {
+            return customDevice;
+        }
+
         return $"{clientInfo.OS.Family} {clientInfo.OS.Major} {clientInfo.Device.Brand} {clientInfo.Device.Model}".Trim();
+    }
+
+    private static bool TryGetCustomUAData(string ua, string pattern, string displayName, out string result)
+    {
+        result = null;
+        if (!ua.Contains(pattern))
+        {
+            return false;
+        }
+
+        var data = ua.Split(" ").FirstOrDefault(r => r.StartsWith(pattern));
+        if (data == null)
+        {
+            return false;
+        }
+
+        var parts = data.Split("/");
+        var version = parts.Length > 1 ? parts[1] : null;
+        result = $"{displayName} {version}";
+        return true;
     }
 }

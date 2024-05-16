@@ -94,7 +94,7 @@ public partial class SettingsController(MessageService messageService,
 
         var settings = new SettingsDto
         {
-            Culture = tenant.GetCulture().ToString(),
+            Culture = setupInfo.GetRightCultureName(tenant.GetCulture()),
             GreetingSettings = tenant.Name == "" ? Resource.PortalName : tenant.Name,
             DocSpace = true,
             Standalone = coreBaseSettings.Standalone,
@@ -293,11 +293,16 @@ public partial class SettingsController(MessageService messageService,
     {
         await permissionContext.DemandPermissionsAsync(SecurityConstants.EditPortalSettings);
 
+        if (!inDto.DefaultQuota.TryGetInt64(out var quota))
+        {
+            throw new Exception(Resource.QuotaGreaterPortalError);
+        }
+
         var tenant = await tenantManager.GetCurrentTenantAsync();
         var tenantSpaceQuota = await tenantManager.GetTenantQuotaAsync(tenant.Id);
         var maxTotalSize = tenantSpaceQuota?.MaxTotalSize ?? -1;
 
-        if (maxTotalSize < inDto.DefaultQuota)
+        if (maxTotalSize < quota)
         {
             throw new Exception(Resource.QuotaGreaterPortalError);
         }
@@ -307,7 +312,7 @@ public partial class SettingsController(MessageService messageService,
             var tenantQuotaSetting = await settingsManager.LoadAsync<TenantQuotaSettings>();
             if (tenantQuotaSetting.EnableQuota)
             {
-                if (tenantQuotaSetting.Quota < inDto.DefaultQuota)
+                if (tenantQuotaSetting.Quota < quota)
                 {
                     throw new Exception(Resource.QuotaGreaterPortalError);
                 }
@@ -315,7 +320,7 @@ public partial class SettingsController(MessageService messageService,
         }
         var quotaSettings = await settingsManager.LoadAsync<TenantUserQuotaSettings>();
         quotaSettings.EnableQuota = inDto.EnableQuota;
-        quotaSettings.DefaultQuota = inDto.DefaultQuota;
+        quotaSettings.DefaultQuota = quota > 0 ? quota : 0;
 
         await settingsManager.SaveAsync(quotaSettings);
 
@@ -337,8 +342,8 @@ public partial class SettingsController(MessageService messageService,
     /// Save the room quota settings
     /// </short>
     /// <category>Quota</category>
-    /// <param type="ASC.Web.Api.ApiModel.RequestsDto.UserQuotaSettingsRequestsDto, ASC.Web.Api" name="inDto">Request parameters for the user quota settings</param>
-    /// <returns type="System.Object, System">Message about the result of saving the room quota settings</returns>
+    /// <param type="ASC.Web.Api.ApiModel.RequestsDto.QuotaSettingsRequestsDto, ASC.Web.Api" name="inDto">Request parameters for the quota settings</param>
+    /// <returns type="ASC.Core.Tenants.TenantRoomQuotaSettings, ASC.Core.Common">Tenant room quota settings</returns>
     /// <path>api/2.0/settings/roomquotasettings</path>
     /// <httpMethod>POST</httpMethod>
     [HttpPost("roomquotasettings")]
@@ -346,11 +351,16 @@ public partial class SettingsController(MessageService messageService,
     {
         await DemandStatisticPermissionAsync();
 
+        if (!inDto.DefaultQuota.TryGetInt64(out var quota))
+        {
+            throw new Exception(Resource.QuotaGreaterPortalError);
+        }
+
         var tenant = await tenantManager.GetCurrentTenantAsync();
         var tenantSpaceQuota = await tenantManager.GetTenantQuotaAsync(tenant.Id);
         var maxTotalSize = tenantSpaceQuota?.MaxTotalSize ?? -1;
 
-        if (maxTotalSize < inDto.DefaultQuota)
+        if (maxTotalSize < quota)
         {
             throw new Exception(Resource.QuotaGreaterPortalError);
         }
@@ -359,7 +369,7 @@ public partial class SettingsController(MessageService messageService,
             var tenantQuotaSetting = await settingsManager.LoadAsync<TenantQuotaSettings>();
             if (tenantQuotaSetting.EnableQuota)
             {
-                if (tenantQuotaSetting.Quota < inDto.DefaultQuota)
+                if (tenantQuotaSetting.Quota < quota)
                 {
                     throw new Exception(Resource.QuotaGreaterPortalError);
                 }
@@ -368,7 +378,7 @@ public partial class SettingsController(MessageService messageService,
 
         var quotaSettings = await settingsManager.LoadAsync<TenantRoomQuotaSettings>();
         quotaSettings.EnableQuota = inDto.EnableQuota;
-        quotaSettings.DefaultQuota = inDto.DefaultQuota;
+        quotaSettings.DefaultQuota = quota > 0 ? quota : 0;
 
         await settingsManager.SaveAsync(quotaSettings);
 
@@ -376,14 +386,14 @@ public partial class SettingsController(MessageService messageService,
     }
 
     /// <summary>
-    /// Saves the tenant quota settings.
+    /// Saves the tenant quota settings specified in the request to the current portal.
     /// </summary>
     /// <short>
     /// Save the tenant quota settings
     /// </short>
     /// <category>Quota</category>
-    /// <param type="ASC.Web.Api.ApiModel.RequestsDto.UserQuotaSettingsRequestsDto, ASC.Web.Api" name="inDto">Request parameters for the user quota settings</param>
-    /// <returns type="System.Object, System">Message about the result of saving the tenant quota settings</returns>
+    /// <param type="ASC.Web.Api.ApiModel.RequestsDto.TenantQuotaSettingsRequestsDto, ASC.Web.Api" name="inDto">Request parameters for the tenant quota settings</param>
+    /// <returns type="ASC.Core.Tenants.TenantQuotaSettings, ASC.Core.Common">Tenant quota settings</returns>
     /// <path>api/2.0/settings/tenantquotasettings</path>
     /// <httpMethod>PUT</httpMethod>
     [HttpPut("tenantquotasettings")]
@@ -422,7 +432,7 @@ public partial class SettingsController(MessageService messageService,
     /// <summary>
     /// Returns a list of all the available portal languages in the format of a two-letter or four-letter language code (e.g. "de", "en-US", etc.).
     /// </summary>
-    /// <short>Get supporrted languages</short>
+    /// <short>Get supported languages</short>
     /// <category>Common settings</category>
     /// <returns type="System.Object, System">List of all the available portal languages</returns>
     /// <path>api/2.0/settings/cultures</path>

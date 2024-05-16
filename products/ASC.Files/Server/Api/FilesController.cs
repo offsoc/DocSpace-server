@@ -260,6 +260,7 @@ public abstract class FilesController<T>(FilesControllerHelper filesControllerHe
     /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileDto, ASC.Files.Core">File information</returns>
     /// <path>api/2.0/files/file/{fileId}</path>
     /// <httpMethod>GET</httpMethod>
+    /// <requiresAuthorization>false</requiresAuthorization>
     [AllowAnonymous]
     [HttpGet("file/{fileId}")]
     public async Task<FileDto<T>> GetFileInfoAsync(T fileId, int version = -1)
@@ -278,6 +279,7 @@ public abstract class FilesController<T>(FilesControllerHelper filesControllerHe
     /// <path>api/2.0/files/file/{fileId}/history</path>
     /// <httpMethod>GET</httpMethod>
     /// <collection>list</collection>
+    /// <requiresAuthorization>false</requiresAuthorization>
     [AllowAnonymous]
     [HttpGet("file/{fileId}/history")]
     public IAsyncEnumerable<FileDto<T>> GetFileVersionInfoAsync(T fileId)
@@ -368,6 +370,7 @@ public abstract class FilesController<T>(FilesControllerHelper filesControllerHe
     /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileDto, ASC.Files.Core">Updated file information</returns>
     /// <path>api/2.0/files/file/{fileId}</path>
     /// <httpMethod>PUT</httpMethod>
+    /// <requiresAuthorization>false</requiresAuthorization>
     [AllowAnonymous]
     [HttpPut("file/{fileId}")]
     public async Task<FileDto<T>> UpdateFileAsync(T fileId, UpdateFileRequestDto inDto)
@@ -393,12 +396,12 @@ public abstract class FilesController<T>(FilesControllerHelper filesControllerHe
     }
 
     /// <summary>
-    /// Returns the primary external link with the identifier specified in the request.
+    /// Returns the primary external link by the identifier specified in the request.
     /// </summary>
-    /// <short>Returns primary external link</short>
+    /// <short>Get primary external link</short>
     /// <category>Files</category>
     /// <param type="System.Int32, System" method="url" name="id">File ID</param>
-    /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileShareDto, ASC.Files.Core">Security information of file</returns>
+    /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileShareDto, ASC.Files.Core">File security information</returns>
     /// <path>api/2.0/files/file/{id}/link</path>
     /// <httpMethod>GET</httpMethod>
     [HttpGet("file/{id}/link")]
@@ -414,15 +417,15 @@ public abstract class FilesController<T>(FilesControllerHelper filesControllerHe
     {
         await fileStorageService.SetFileOrder(fileId, inDto.Order);
     }
-    
+
     /// <summary>
     /// Returns the external links of a file with the ID specified in the request.
     /// </summary>
-    /// <short>Returns file external links</short>
+    /// <short>Get file external links</short>
     /// <category>Files</category>
     /// <param type="System.Int32, System" method="url" name="fileId">File ID</param>
-    /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileShareDto, ASC.Files.Core">File security info</returns>
-    /// <path>api/2.0/files/file/{id}/links</path>
+    /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileShareDto, ASC.Files.Core">File security information</returns>
+    /// <path>api/2.0/files/file/{fileId}/links</path>
     /// <httpMethod>GET</httpMethod>
     /// <collection>list</collection>
     [HttpGet("file/{fileId}/links")]
@@ -442,13 +445,13 @@ public abstract class FilesController<T>(FilesControllerHelper filesControllerHe
     }
 
     /// <summary>
-    /// Sets an external link with the ID specified in the request.
+    /// Sets an external link to a file with the ID specified in the request.
     /// </summary>
     /// <short>Set an external link</short>
     /// <category>Files</category>
     /// <param type="System.Int32, System" method="url" name="id">File ID</param>
     /// <param type="ASC.Files.Core.ApiModels.RequestDto.FileLinkRequestDto, ASC.Files.Core" name="inDto">External link request parameters</param>
-    /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileShareDto, ASC.Files.Core">Security information of file</returns>
+    /// <returns type="ASC.Files.Core.ApiModels.ResponseDto.FileShareDto, ASC.Files.Core">File security information</returns>
     /// <path>api/2.0/files/file/{id}/links</path>
     /// <httpMethod>PUT</httpMethod>
     [HttpPut("file/{id}/links")]
@@ -557,6 +560,7 @@ public class FilesControllerCommon(
     /// <path>api/2.0/files/thumbnails</path>
     /// <httpMethod>POST</httpMethod>
     /// <collection>list</collection>
+    /// <requiresAuthorization>false</requiresAuthorization>
     [AllowAnonymous]
     [HttpPost("thumbnails")]
     public async Task<IEnumerable<JsonElement>> CreateThumbnailsAsync(BaseBatchRequestDto inDto)

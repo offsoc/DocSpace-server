@@ -656,7 +656,7 @@ public class UserController(ICache cache,
     /// <param type="System.Nullable{ASC.Core.AccountLoginType}, System" name="accountLoginType">Account login type</param>
     /// <param type="System.Nullable{ASC.Core.QuotaFilter}, System" name="quotaFilter">Filter by quota (Default - 1, Custom - 2)</param>
     /// <param type="System.Nullable{System.Boolean}, System" name="withoutGroup">Specifies whether the user should be a member of a group or not</param>
-    /// <param type="System.Nullable{System.Boolean}, System" name="excludeGroup">Specifies whether or not the user should be a member of the group with the specified id</param>
+    /// <param type="System.Nullable{System.Boolean}, System" name="excludeGroup">Specifies whether or not the user should be a member of the group with the specified ID</param>
     /// <returns type="ASC.Web.Api.Models.EmployeeFullDto, ASC.Api.Core">List of users with the detailed information</returns>
     /// <path>api/2.0/people/filter</path>
     /// <httpMethod>GET</httpMethod>
@@ -760,7 +760,7 @@ public class UserController(ICache cache,
     /// <param type="System.Nullable{ASC.Core.AccountLoginType}, System" name="accountLoginType">Account login type</param>
     /// <param type="System.Nullable{ASC.Core.QuotaFilter}, System" name="quotaFilter">Filter by quota (Default - 1, Custom - 2)</param>
     /// <param type="System.Nullable{System.Boolean}, System" name="withoutGroup">Specifies whether the user should be a member of a group or not</param>
-    /// /// <param type="System.Nullable{System.Boolean}, System" name="excludeGroup">Specifies whether or not the user should be a member of the group with the specified id</param>
+    /// <param type="System.Nullable{System.Boolean}, System" name="excludeGroup">Specifies whether or not the user should be a member of the group with the specified ID</param>
     /// <returns type="ASC.Web.Api.Models.EmployeeDto, ASC.Api.Core">List of users</returns>
     /// <path>api/2.0/people/simple/filter</path>
     /// <httpMethod>GET</httpMethod>
@@ -1113,13 +1113,12 @@ public class UserController(ICache cache,
         }
 
         var error = await userManagerWrapper.SendUserPasswordAsync(inDto.Email);
-        if (string.IsNullOrEmpty(error))
+        if (!string.IsNullOrEmpty(error))
         {
-            return string.Format(Resource.MessageYourPasswordSendedToEmail, inDto.Email);
+            logger.ErrorPasswordRecovery(inDto.Email, error);
         }
 
-        logger.ErrorPasswordRecovery(inDto.Email, error);
-        throw new InvalidOperationException(error);
+        return string.Format(Resource.MessageYourPasswordSendedToEmail, inDto.Email);
     }
 
     /// <summary>
@@ -1480,6 +1479,7 @@ public class UserController(ICache cache,
             .ToAsyncEnumerable()
             .Where(userId => !_userManager.IsSystemUser(userId))
             .SelectAwait(async userId => await _userManager.GetUsersAsync(userId))
+            .Where(r => r.Status == EmployeeStatus.Active)
             .ToListAsync();
 
         foreach (var user in users)
@@ -1547,6 +1547,11 @@ public class UserController(ICache cache,
     [HttpPut("userquota")]
     public async IAsyncEnumerable<EmployeeFullDto> UpdateUserQuotaAsync(UpdateMembersQuotaRequestDto inDto)
     {
+        if (!inDto.Quota.TryGetInt64(out var quota))
+        {
+            throw new Exception(Resource.QuotaGreaterPortalError);
+        }
+
         await _permissionContext.DemandPermissionsAsync(SecurityConstants.EditPortalSettings);
 
         var users = await inDto.UserIds.ToAsyncEnumerable()
@@ -1558,7 +1563,7 @@ public class UserController(ICache cache,
         var tenantSpaceQuota = await tenantManager.GetTenantQuotaAsync(tenant.Id);
         var maxTotalSize = tenantSpaceQuota?.MaxTotalSize ?? -1;
         
-        if (maxTotalSize < inDto.Quota)
+        if (maxTotalSize < quota)
         {
             throw new Exception(Resource.QuotaGreaterPortalError);
         }
@@ -1567,7 +1572,7 @@ public class UserController(ICache cache,
             var tenantQuotaSetting = await settingsManager.LoadAsync<TenantQuotaSettings>();
             if (tenantQuotaSetting.EnableQuota)
             {
-                if (tenantQuotaSetting.Quota < inDto.Quota)
+                if (tenantQuotaSetting.Quota < quota)
                 {
                     throw new Exception(Resource.QuotaGreaterPortalError);
                 }
@@ -1576,29 +1581,30 @@ public class UserController(ICache cache,
 
         foreach (var user in users)
         {
-            await settingsManager.SaveAsync(new UserQuotaSettings { UserQuota = inDto.Quota }, user);
+            await settingsManager.SaveAsync(new UserQuotaSettings { UserQuota = quota }, user);
 
             var userUsedSpace = Math.Max(0, (await quotaService.FindUserQuotaRowsAsync(tenant.Id, user.Id)).Where(r => !string.IsNullOrEmpty(r.Tag) && !string.Equals(r.Tag, Guid.Empty.ToString())).Sum(r => r.Counter));
             var userQuotaData = await settingsManager.LoadAsync<UserQuotaSettings>(user);
             var quotaUserSettings = await settingsManager.LoadAsync<TenantUserQuotaSettings>();
             var userQuotaLimit = userQuotaData.UserQuota == userQuotaData.GetDefault().UserQuota ? quotaUserSettings.DefaultQuota : userQuotaData.UserQuota;
-            _ = quotaSocketManager.ChangeCustomQuotaUsedValueAsync(tenant.Id, customQuota.GetFeature<UserCustomQuotaFeature>().Name, quotaUserSettings.EnableQuota, userUsedSpace, inDto.Quota, new List<Guid>() { user.Id });
+            _ = quotaSocketManager.ChangeCustomQuotaUsedValueAsync(tenant.Id, customQuota.GetFeature<UserCustomQuotaFeature>().Name, quotaUserSettings.EnableQuota, userUsedSpace, quota, new List<Guid> { user.Id });
 
             yield return await employeeFullDtoHelper.GetFullAsync(user);
         }
     }
 
     /// <summary>
-    /// Reset a user quota limit with the ID specified in the request from the portal.
+    /// Resets a user quota limit with the ID specified in the request from the portal.
     /// </summary>
     /// <short>
     /// Reset a user quota limit
     /// </short>
     /// <category>Quota</category>
-    /// <param type="ASC.People.ApiModels.RequestDto.UpdateMembersRequestDto, ASC.People" name="inDto">Request parameters for updating user information</param>
+    /// <param type="ASC.People.ApiModels.RequestDto.UpdateMembersQuotaRequestDto, ASC.People" name="inDto">Request parameters for updating user information</param>
     /// <returns type="ASC.Web.Api.Models.EmployeeFullDto, ASC.Api.Core">User detailed information</returns>
     /// <path>api/2.0/people/resetquota</path>
     /// <httpMethod>PUT</httpMethod>
+    /// <collection>list</collection>
     [HttpPut("resetquota")]
     public async IAsyncEnumerable<EmployeeFullDto> ResetUsersQuota(UpdateMembersQuotaRequestDto inDto)
     {
@@ -1627,7 +1633,7 @@ public class UserController(ICache cache,
             var userQuotaData = await settingsManager.LoadAsync<UserQuotaSettings>(user);
             var quotaUserSettings = await settingsManager.LoadAsync<TenantUserQuotaSettings>();
             var userQuotaLimit = userQuotaData.UserQuota == userQuotaData.GetDefault().UserQuota ? quotaUserSettings.DefaultQuota : userQuotaData.UserQuota;
-            _ = quotaSocketManager.ChangeCustomQuotaUsedValueAsync(tenant.Id, customQuota.GetFeature<UserCustomQuotaFeature>().Name, quotaUserSettings.EnableQuota, userUsedSpace, userQuotaLimit, new List<Guid>() { user.Id });
+            _ = quotaSocketManager.ChangeCustomQuotaUsedValueAsync(tenant.Id, customQuota.GetFeature<UserCustomQuotaFeature>().Name, quotaUserSettings.EnableQuota, userUsedSpace, userQuotaLimit, new List<Guid> { user.Id });
 
             yield return await employeeFullDtoHelper.GetFullAsync(user);
         }
@@ -1678,7 +1684,7 @@ public class UserController(ICache cache,
         
         foreach (var userId in userIds)
         {
-            var reassignStatus = queueWorkerReassign.GetProgressItemStatus(tenant.Id, userId);
+            var reassignStatus = await queueWorkerReassign.GetProgressItemStatus(tenant.Id, userId);
             if (reassignStatus == null || reassignStatus.IsCompleted)
             {
                 continue;

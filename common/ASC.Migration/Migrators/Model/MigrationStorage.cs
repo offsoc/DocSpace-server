@@ -40,7 +40,7 @@ public class MigrationStorage
 
     public virtual MigratingApiFiles ToApiInfo()
     {
-        return new MigratingApiFiles()
+        return new MigratingApiFiles
         {
             BytesTotal = BytesTotal,
             FilesCount = Files.Count(),
@@ -61,8 +61,11 @@ public class MigrationFile
     public string Title { get; set; }
     public int Version { get; set; }
     public int VersionGroup { get; set; }
+    public string Comment { get; set; }
     public int Folder { get; set; }
     public string Path { get; set; }
+    public DateTime Created { get; set; }
+    public DateTime Modified { get; set; }
 }
 
 public class MigrationFolder
@@ -71,6 +74,11 @@ public class MigrationFolder
     public int ParentId { get; set; }
     public string Title { get; set; }
     public int Level { get; set; }
+
+    /*only projects*/
+
+    public bool Private { get; set; }
+    public string Owner { get; set; }
 }
 
 public class MigrationSecurity

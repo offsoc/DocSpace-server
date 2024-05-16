@@ -52,12 +52,12 @@ public class NextcloudWorkspaceMigrator : Migrator
         DisplayUserSettingsHelper displayUserSettingsHelper,
         UserManagerWrapper userManagerWrapper) : base(securityContext, userManager, tenantQuotaFeatureStatHelper, quotaSocketManager, fileStorageService, globalFolderHelper, serviceProvider, daoFactory, entryManager, migrationLogger, authContext, displayUserSettingsHelper, userManagerWrapper)
     {
-        MigrationInfo = new MigrationInfo() { Name = "Nextcloud" };
+        MigrationInfo = new MigrationInfo { Name = "Nextcloud" };
     }
 
-    public override async Task InitAsync(string path, CancellationToken cancellationToken, OperationType operation)
+    public override void Init(string path, CancellationToken cancellationToken, OperationType operation)
     {
-        await MigrationLogger.InitAsync();
+        MigrationLogger.Init();
         _cancellationToken = cancellationToken;
 
         MigrationInfo.Operation = operation;
@@ -133,7 +133,7 @@ public class NextcloudWorkspaceMigrator : Migrator
             var dbFile = Directory.GetFiles(Directory.GetDirectories(TmpFolder)[0], "*.bak")[0];
             if (dbFile == null)
             {
-                throw new Exception();
+                throw new Exception("*.bak file not found");
             }
             if (reportProgress)
             {
@@ -205,12 +205,12 @@ public class NextcloudWorkspaceMigrator : Migrator
             }
             DbExtractGroup(dbFile);
         }
-        catch
+        catch(Exception e)
         {
             MigrationInfo.FailedArchives.Add(Path.GetFileName(_takeout));
             var error = string.Format(MigrationResource.CanNotParseArchive, Path.GetFileNameWithoutExtension(_takeout));
             await ReportProgressAsync(100, error);
-            throw new Exception(error);
+            throw new Exception(error, e);
         }
         if (reportProgress)
         {
@@ -231,7 +231,7 @@ public class NextcloudWorkspaceMigrator : Migrator
 
         foreach (var g in groupList)
         {
-            var group = new MigrationGroup() { Info = new(), UserKeys = new HashSet<string>() };
+            var group = new MigrationGroup { Info = new(), UserKeys = new HashSet<string>() };
             group.Info.Name = g.Split(',').First().Trim('\'');
             MigrationInfo.Groups.Add(group.Info.Name, group);
         }
@@ -346,7 +346,7 @@ public class NextcloudWorkspaceMigrator : Migrator
         }
         else
         {
-            throw new Exception();
+            throw new Exception("accounts_data not found");
         }
 
         var storages = GetDumpChunk("oc_storages", sqlFile);
@@ -395,7 +395,7 @@ public class NextcloudWorkspaceMigrator : Migrator
                     continue;
                 }
 
-                filesAndFolders.Add(new NCFileCache()
+                filesAndFolders.Add(new NCFileCache
                 {
                     FileId = int.Parse(values[0]),
                     Path = values[2],
@@ -418,7 +418,7 @@ public class NextcloudWorkspaceMigrator : Migrator
                     continue;
                 }
 
-                file.Share.Add(new NCShare()
+                file.Share.Add(new NCShare
                 {
                     Id = int.Parse(values[0]),
                     ShareWith = values[2],
@@ -451,7 +451,7 @@ public class NextcloudWorkspaceMigrator : Migrator
                     if (attr.HasFlag(FileAttributes.Directory))
                     {
                         var split = entry.Path.Split('/');
-                        var folder = new MigrationFolder()
+                        var folder = new MigrationFolder
                         {
                             Id = entry.FileId,
                             Level = j++,
@@ -466,7 +466,7 @@ public class NextcloudWorkspaceMigrator : Migrator
                         var fi = new FileInfo(tmpPath);
                         user.Storage.BytesTotal += fi.Length;
                         var split = entry.Path.Split('/');
-                        var file = new MigrationFile()
+                        var file = new MigrationFile
                         {
                             Id = entry.FileId,
                             Path = tmpPath,
@@ -497,7 +497,7 @@ public class NextcloudWorkspaceMigrator : Migrator
 
             var shareType = GetPortalShare(shareInfo.Premissions, isFile);
 
-            var security = new MigrationSecurity()
+            var security = new MigrationSecurity
             {
                 Subject = shareInfo.ShareWith,
                 EntryId = entry.FileId,
@@ -518,7 +518,7 @@ public class NextcloudWorkspaceMigrator : Migrator
                 return ASCShare.Read;
             }
 
-            return ASCShare.ReadWrite;//permission = 19 => denySharing = true, permission = 3 => denySharing = false; ASCShare.ReadWrite
+            return ASCShare.Editing;//permission = 19 => denySharing = true, permission = 3 => denySharing = false; ASCShare.ReadWrite
         }
         else
         {
@@ -527,7 +527,7 @@ public class NextcloudWorkspaceMigrator : Migrator
                 return ASCShare.Read;
             }
 
-            return ASCShare.ReadWrite;//permission = 19||23 => denySharing = true, permission = 7||15 => denySharing = false; ASCShare.ReadWrite
+            return ASCShare.Editing;//permission = 19||23 => denySharing = true, permission = 7||15 => denySharing = false; ASCShare.ReadWrite
         }
     }
 }

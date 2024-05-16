@@ -69,7 +69,7 @@ public class BreadCrumbsManager(
     {
         if (folderId == null)
         {
-            return new List<FileEntry>();
+            return [];
         }
 
         var breadCrumbs = await fileSecurity.FilterReadAsync(folderDao.GetParentFoldersAsync(folderId)).Cast<FileEntry>().ToListAsync();
@@ -80,7 +80,7 @@ public class BreadCrumbsManager(
         {
             rootId = await globalFolderHelper.FolderShareAsync;
         }
-        else if (firstVisible.ProviderEntry && firstVisible.ProviderMapped && (firstVisible.RootFolderType is FolderType.VirtualRooms or FolderType.Archive))
+        else if (firstVisible.ProviderMapped && (firstVisible.RootFolderType is FolderType.VirtualRooms or FolderType.Archive))
         {
             if (authContext.IsAuthenticated && firstVisible.ShareRecord is not { IsLink: true })
             {
@@ -90,6 +90,14 @@ public class BreadCrumbsManager(
             }
                 
             breadCrumbs = breadCrumbs.SkipWhile(f => f is Folder<T> folder && !DocSpaceHelper.IsRoom(folder.FolderType)).ToList();
+        }
+        else if (!firstVisible.ProviderEntry && firstVisible.RootFolderType is FolderType.VirtualRooms or FolderType.Archive && authContext.IsAuthenticated)
+        {
+            var room = breadCrumbs.FirstOrDefault(e => e is Folder<T> folder && DocSpaceHelper.IsRoom(folder.FolderType));
+            if (room is { ShareRecord.IsLink: true })
+            {
+                breadCrumbs = breadCrumbs.SkipWhile(f => f is Folder<T> folder && !DocSpaceHelper.IsRoom(folder.FolderType)).ToList();
+            }
         }
         else
         {
@@ -237,13 +245,34 @@ public class EntryManager(IDaoFactory daoFactory,
     SecurityContext securityContext,
     FormFillingReportCreator formFillingReportCreator,
     TenantUtil tenantUtil,
-    IDistributedLockProvider distributedLockProvider)
+    IDistributedLockProvider distributedLockProvider,
+    IQuotaService quotaService,
+    TenantManager tenantManager)
 {
     private const string UpdateList = "filesUpdateList";
 
-    public async Task<(IEnumerable<FileEntry> Entries, int Total)> GetEntriesAsync<T>(Folder<T> parent, int from, int count, FilterType filterType, bool subjectGroup, Guid subjectId,
-        string searchText, string[] extension, bool searchInContent, bool withSubfolders, OrderBy orderBy, T roomId = default, SearchArea searchArea = SearchArea.Active, bool withoutTags = false, IEnumerable<string> tagNames = null,
-        bool excludeSubject = false, ProviderFilter provider = ProviderFilter.None, SubjectFilter subjectFilter = SubjectFilter.Owner, ApplyFilterOption applyFilterOption = ApplyFilterOption.All, QuotaFilter quotaFilter = QuotaFilter.All)
+    public async Task<(IEnumerable<FileEntry> Entries, int Total)> GetEntriesAsync<T>(
+        Folder<T> parent,
+        int from,
+        int count,
+        FilterType filterType,
+        bool subjectGroup,
+        Guid subjectId,
+        string searchText,
+        string[] extension,
+        bool searchInContent,
+        bool withSubfolders,
+        OrderBy orderBy,
+        T roomId = default,
+        SearchArea searchArea = SearchArea.Active,
+        bool withoutTags = false,
+        IEnumerable<string> tagNames = null,
+        bool excludeSubject = false,
+        ProviderFilter provider = ProviderFilter.None,
+        SubjectFilter subjectFilter = SubjectFilter.Owner,
+        ApplyFilterOption applyFilterOption = ApplyFilterOption.All,
+        QuotaFilter quotaFilter = QuotaFilter.All,
+        StorageFilter storageFilter = StorageFilter.None)
     {
         int total;
         var withShared = false;
@@ -368,7 +397,8 @@ public class EntryManager(IDaoFactory daoFactory,
         }
         else if (parent.FolderType is FolderType.VirtualRooms or FolderType.Archive && !parent.ProviderEntry)
         {
-            entries = await fileSecurity.GetVirtualRoomsAsync(filterType, subjectId, searchText, searchInContent, withSubfolders, searchArea, withoutTags, tagNames, excludeSubject, provider, subjectFilter, quotaFilter);
+            entries = await fileSecurity.GetVirtualRoomsAsync(filterType, subjectId, searchText, searchInContent, withSubfolders, searchArea, withoutTags, tagNames, excludeSubject, 
+                provider, subjectFilter, quotaFilter, storageFilter);
 
             CalculateTotal();
         }
@@ -442,7 +472,7 @@ public class EntryManager(IDaoFactory daoFactory,
         {
             if (parent.FolderType != FolderType.Recent)
             {
-                data = await SortEntries<T>(data, orderBy);
+                data = await SortEntries<T>(data, orderBy, provider != ProviderFilter.Storage);
             }
 
             if (0 < from)
@@ -463,7 +493,7 @@ public class EntryManager(IDaoFactory daoFactory,
         //sorting after marking
         if (orderBy.SortedBy == SortedByType.New)
         {
-            data = await SortEntries<T>(data, orderBy);
+            data = await SortEntries<T>(data, orderBy, provider != ProviderFilter.Storage);
 
             if (0 < from)
             {
@@ -789,7 +819,7 @@ public class EntryManager(IDaoFactory daoFactory,
         return entries;
     }
 
-    public async Task<IEnumerable<FileEntry>> SortEntries<T>(IEnumerable<FileEntry> entries, OrderBy orderBy)
+    public async Task<IEnumerable<FileEntry>> SortEntries<T>(IEnumerable<FileEntry> entries, OrderBy orderBy, bool pinOnTop = true)
     {
         if (entries == null || !entries.Any())
         {
@@ -921,17 +951,47 @@ public class EntryManager(IDaoFactory daoFactory,
         if (orderBy.SortedBy != SortedByType.New)
         {
             var rooms = entries.Where(r => r.FileEntryType == FileEntryType.Folder && DocSpaceHelper.IsRoom(((IFolder)r).FolderType));
-            var pinnedRooms = rooms.Where(r => ((IFolder)r).Pinned);
-            rooms = rooms.Except(pinnedRooms);
 
-            var folders = entries.Where(r => r.FileEntryType == FileEntryType.Folder).Except(pinnedRooms).Except(rooms);
-            var files = entries.Where(r => r.FileEntryType == FileEntryType.File);
-            pinnedRooms = pinnedRooms.OrderBy(r => r, comparer);
-            rooms = rooms.OrderBy(r => r, comparer);
-            folders = folders.OrderBy(r => r, comparer);
-            files = files.OrderBy(r => r, comparer);
+            if (pinOnTop)
+            {
+                var pinnedRooms = rooms.Where(r => ((IFolder)r).Pinned);
+                var thirdpartyRooms = rooms.Where(r => r.ProviderEntry);
 
-            return pinnedRooms.Concat(rooms).Concat(folders).Concat(files);
+                if (orderBy.SortedBy == SortedByType.UsedSpace)
+                {
+                    rooms = rooms.Except(thirdpartyRooms).Except(pinnedRooms);
+                }
+                else
+                {
+                    rooms = rooms.Except(pinnedRooms);
+                }
+
+                var folders = orderBy.SortedBy == SortedByType.UsedSpace ?
+                    entries.Where(r => r.FileEntryType == FileEntryType.Folder).Except(pinnedRooms).Except(thirdpartyRooms).Except(rooms) :
+                    entries.Where(r => r.FileEntryType == FileEntryType.Folder).Except(pinnedRooms).Except(rooms);
+                var files = entries.Where(r => r.FileEntryType == FileEntryType.File);
+                pinnedRooms = pinnedRooms.OrderBy(r => r, comparer);
+                rooms = rooms.OrderBy(r => r, comparer);
+                folders = folders.OrderBy(r => r, comparer);
+                files = files.OrderBy(r => r, comparer);
+
+                if (orderBy.SortedBy == SortedByType.UsedSpace)
+                {
+                    return pinnedRooms.Concat(thirdpartyRooms).Concat(rooms).Concat(folders).Concat(files);
+                }
+                return pinnedRooms.Concat(rooms).Concat(folders).Concat(files);
+            }
+            else
+            {
+                var folders = entries.Where(r => r.FileEntryType == FileEntryType.Folder).Except(rooms);
+                var files = entries.Where(r => r.FileEntryType == FileEntryType.File);
+
+                rooms = rooms.OrderBy(r => r, comparer);
+                folders = folders.OrderBy(r => r, comparer);
+                files = files.OrderBy(r => r, comparer);
+
+                return rooms.Concat(folders).Concat(files);
+            }
         }
 
         return entries.OrderBy(r => r, comparer);
@@ -1481,6 +1541,54 @@ public class EntryManager(IDaoFactory daoFactory,
         {
             throw new Exception(FilesCommonResource.ErrorMessage_UpdateEditingFile);
         }
+
+        var folderDao = daoFactory.GetFolderDao<T>();
+        var currentFolder = await folderDao.GetFolderAsync(file.FolderIdDisplay);
+        var (folderId, _) = await folderDao.GetParentRoomInfoFromFileEntryAsync(currentFolder);
+
+        if (int.TryParse(folderId.ToString(), out var roomId))
+        {
+            if (roomId != -1)
+            {
+                var currentRoom = await folderDao.GetFolderAsync((T)Convert.ChangeType(roomId, typeof(T)));
+                var quotaRoomSettings = await settingsManager.LoadAsync<TenantRoomQuotaSettings>();
+                if (quotaRoomSettings.EnableQuota)
+                {
+                    var roomQuotaLimit = currentRoom.SettingsQuota == TenantEntityQuotaSettings.DefaultQuotaValue ? quotaRoomSettings.DefaultQuota : currentRoom.SettingsQuota;
+                    if (roomQuotaLimit != TenantEntityQuotaSettings.NoQuota)
+                    {
+                        if (roomQuotaLimit - currentRoom.Counter < file.ContentLength)
+                        {
+                            throw FileSizeComment.GetRoomFreeSpaceException(roomQuotaLimit);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var tenantId = await tenantManager.GetCurrentTenantIdAsync();
+                var quotaUserSettings = await settingsManager.LoadAsync<TenantUserQuotaSettings>();
+                if (quotaUserSettings.EnableQuota)
+                {
+                    var user = await userManager.GetUsersAsync(authContext.CurrentAccount.ID);
+                    var userQuotaData = await settingsManager.LoadAsync<UserQuotaSettings>(user);
+
+                    var userQuotaLimit = userQuotaData.UserQuota == userQuotaData.GetDefault().UserQuota ? quotaUserSettings.DefaultQuota : userQuotaData.UserQuota;
+
+                    if (userQuotaLimit != UserQuotaSettings.NoQuota)
+                    {
+                        var userUsedSpace = Math.Max(0, (await quotaService.FindUserQuotaRowsAsync(tenantId, user.Id)).Where(r => !string.IsNullOrEmpty(r.Tag) && !string.Equals(r.Tag, Guid.Empty.ToString())).Sum(r => r.Counter));
+
+                        if (userQuotaLimit - userUsedSpace < file.ContentLength)
+                        {
+                            throw FileSizeComment.GetUserFreeSpaceException(userQuotaLimit);
+                        }
+                    }
+                }
+            }
+        }
+
+
 
         cache.Insert(UpdateList + fileId, fileId.ToString(), TimeSpan.FromMinutes(2));
 

@@ -29,8 +29,7 @@ using Folder = Microsoft.OneDrive.Sdk.Folder;
 namespace ASC.Files.Thirdparty.OneDrive;
 
 [Transient]
-internal class OneDriveStorage(ConsumerFactory consumerFactory, IHttpClientFactory clientFactory,
-        OAuth20TokenHelper oAuth20TokenHelper)
+internal class OneDriveStorage(IHttpClientFactory clientFactory, OAuth20TokenHelper oAuth20TokenHelper)
     : IThirdPartyStorage<Item, Item, Item>
 {
     private OAuth20Token _token;
@@ -49,7 +48,7 @@ internal class OneDriveStorage(ConsumerFactory consumerFactory, IHttpClientFacto
                 return _token.AccessToken;
             }
 
-            _token = oAuth20TokenHelper.RefreshToken<OneDriveLoginProvider>(consumerFactory, _token);
+            _token = oAuth20TokenHelper.RefreshToken<OneDriveLoginProvider>(_token);
             _onedriveClientCache = null;
 
             return _token.AccessToken;
@@ -105,20 +104,22 @@ internal class OneDriveStorage(ConsumerFactory consumerFactory, IHttpClientFacto
         {
             return await GetItemRequest(itemId).Request().GetAsync();
         }
-        catch (Exception ex)
+        catch (NullReferenceException)
         {
-            var serviceException = (ServiceException)ex.InnerException;
-            if (serviceException is { StatusCode: HttpStatusCode.NotFound })
-            {
-                return null;
-            }
-            throw;
+            return null;
         }
     }
 
     public async Task<List<Item>> GetItemsAsync(string folderId)
     {
-        return [..await GetItemRequest(folderId).Children.Request().GetAsync()];
+        try
+        {
+            return [..await GetItemRequest(folderId).Children.Request().GetAsync()];
+        }
+        catch (NullReferenceException)
+        {
+            return [];
+        }
     }
 
     public async Task<Stream> DownloadStreamAsync(Item file, int offset = 0)

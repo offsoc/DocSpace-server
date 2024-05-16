@@ -45,7 +45,7 @@ public class MigrationInfo
 
     public virtual MigrationApiInfo ToApiInfo()
     {
-        return new MigrationApiInfo()
+        return new MigrationApiInfo
         {
             Users = Users.Select(u => u.Value.ToApiInfo(u.Key)).ToList(),
             ExistUsers = ExistUsers.Select(u => u.Value.ToApiInfo(u.Key)).ToList(),
@@ -90,6 +90,8 @@ public class MigrationInfo
         if (ProjectStorage != null)
         { 
             ProjectStorage.ShouldImport = apiInfo.ImportSharedFolders;
+            ProjectStorage.ShouldImportSharedFiles = true;
+            ProjectStorage.ShouldImportSharedFolders = true;
         }
 
         foreach (var group in Groups)

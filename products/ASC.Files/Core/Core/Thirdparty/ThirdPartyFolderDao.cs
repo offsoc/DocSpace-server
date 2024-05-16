@@ -28,16 +28,16 @@ namespace ASC.Files.Core.Core.Thirdparty;
 
 /// <inheritdoc />
 [Scope]
-internal class ThirdPartyFolderDao<TFile, TFolder, TItem>(IDbContextFactory<FilesDbContext> dbContextFactory,
-        UserManager userManager,
-        CrossDao crossDao,
-        IDaoSelector<TFile, TFolder, TItem> daoSelector,
-        IFileDao<int> fileDao,
-        IFolderDao<int> folderDao,
-        TempStream tempStream,
-        SetupInfo setupInfo,
-        IDaoBase<TFile, TFolder, TItem> dao,
-        TenantManager tenantManager)
+internal class ThirdPartyFolderDao<TFile, TFolder, TItem>(
+    IDbContextFactory<FilesDbContext> dbContextFactory,
+    UserManager userManager,
+    CrossDao crossDao,
+    IDaoSelector<TFile, TFolder, TItem> daoSelector,
+    IFileDao<int> fileDao,
+    IFolderDao<int> folderDao,
+    SetupInfo setupInfo,
+    IDaoBase<TFile, TFolder, TItem> dao,
+    TenantManager tenantManager)
     : BaseFolderDao, IFolderDao<string>
     where TFile : class, TItem
     where TFolder : class, TItem
@@ -54,6 +54,17 @@ internal class ThirdPartyFolderDao<TFile, TFolder, TItem>(IDbContextFactory<File
     public async Task<Folder<string>> GetFolderAsync(string folderId)
     {
         var folder = dao.ToFolder(await dao.GetFolderAsync(folderId));
+        if (folder == null)
+        {
+            if (dao.IsRoom(folderId))
+            {
+                folder = dao.GetErrorRoom();
+            }
+            else
+            {
+                return null;
+            }
+        }
 
         if (folder.FolderType is not (FolderType.CustomRoom or FolderType.PublicRoom))
         {
@@ -187,7 +198,7 @@ internal class ThirdPartyFolderDao<TFile, TFolder, TItem>(IDbContextFactory<File
         {
             var folder = await dao.GetFolderAsync(folderId);
 
-            if (folder is IErrorItem)
+            if (folder is null or IErrorItem)
             {
                 folderId = null;
             }
