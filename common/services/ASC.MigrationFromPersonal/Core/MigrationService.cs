@@ -24,7 +24,8 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
-using ASC.Core.Common.EF;
+using ASC.Core;
+using ASC.Web.Studio.Core.Notify;
 
 namespace ASC.MigrationFromPersonal;
 
@@ -33,7 +34,9 @@ public class MigrationService(IServiceProvider serviceProvider,
     IConfiguration configuration,
     IDbContextFactory<MigrationContext> dbContextFactory,
     ILogger<MigrationService> logger,
-    CreatorDbContext creatorDbContext) : BackgroundService
+    CreatorDbContext creatorDbContext,
+    StudioNotifyService studioNotifyService,
+    UserManager userManager) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -77,6 +80,8 @@ public class MigrationService(IServiceProvider serviceProvider,
 
                 migration.Status = MigrationStatus.Success;
                 migration.Alias = alias;
+                var u = await userManager.GetUserByEmailAsync(migration.Email);
+                await studioNotifyService.MigrationPersonalToDocspaceAsync(u);
                 logger.Debug($"user - {migration.Email} migrated to {alias}");
             }
             catch (Exception e)
