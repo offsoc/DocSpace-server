@@ -24,6 +24,8 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
+using System.Threading.Channels;
+
 using ASC.Api.Core;
 using ASC.Api.Core.Core;
 using ASC.Common;
@@ -31,6 +33,9 @@ using ASC.Common.Logging;
 using ASC.Core.Common.EF;
 using ASC.Core.Common.EF.Context;
 using ASC.Core.Common.Hosting;
+using ASC.Core.Common.Notify.Engine;
+using ASC.Core.Common.Quota;
+using ASC.Core.Notify.Socket;
 using ASC.Data.Backup.EF.Context;
 using ASC.Data.Storage;
 using ASC.EventBus.Abstractions;
@@ -42,6 +47,7 @@ using ASC.Files.Core.VirtualRooms;
 using ASC.MessagingSystem.EF.Context;
 using ASC.MigrationFromPersonal.Core;
 using ASC.MigrationFromPersonal.EF;
+using ASC.Notify.Engine;
 using ASC.Webhooks.Core.EF.Context;
 
 using StackExchange.Redis.Extensions.Core.Configuration;
@@ -98,14 +104,26 @@ public class Startup
         services.AddSingleton(redisConfiguration)
                 .AddSingleton(redisConnection);
 
+        services.AddSingleton(Channel.CreateUnbounded<NotifyRequest>());
+        services.AddSingleton(svc => svc.GetRequiredService<Channel<NotifyRequest>>().Reader);
+        services.AddSingleton(svc => svc.GetRequiredService<Channel<NotifyRequest>>().Writer);
+        services.AddHostedService<NotifySenderService>();
+
+        services.AddSingleton(Channel.CreateUnbounded<SocketData>());
+        services.AddSingleton(svc => svc.GetRequiredService<Channel<SocketData>>().Reader);
+        services.AddSingleton(svc => svc.GetRequiredService<Channel<SocketData>>().Writer);
+        services.AddHostedService<SocketService>();
+
         _diHelper.Configure(services);
 
         _diHelper.TryAdd<MigrationCreator>();
         _diHelper.TryAdd<MigrationRunner>();
         _diHelper.TryAdd<MigrationService>();
+        _diHelper.TryAdd<QuotaSocketManager>();
         _diHelper.TryAdd<RoomLogoValidator>();
         _diHelper.TryAdd<FileValidator>();
         _diHelper.TryAdd<FileSecurity>();
+
         services.AddHostedService<MigrationService>();
     }
 

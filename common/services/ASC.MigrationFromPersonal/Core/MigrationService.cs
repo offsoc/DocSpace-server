@@ -34,9 +34,7 @@ public class MigrationService(IServiceProvider serviceProvider,
     IConfiguration configuration,
     IDbContextFactory<MigrationContext> dbContextFactory,
     ILogger<MigrationService> logger,
-    CreatorDbContext creatorDbContext,
-    StudioNotifyService studioNotifyService,
-    UserManager userManager) : BackgroundService
+    CreatorDbContext creatorDbContext) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -53,7 +51,7 @@ public class MigrationService(IServiceProvider serviceProvider,
             migration.Status = MigrationStatus.InWork;
             migration.StartDate = DateTime.Now;
             context.Update(migration);
-            await context.SaveChangesAsync();
+           // await context.SaveChangesAsync();
 
             try
             {
@@ -80,6 +78,9 @@ public class MigrationService(IServiceProvider serviceProvider,
 
                 migration.Status = MigrationStatus.Success;
                 migration.Alias = alias;
+
+                var userManager = serviceProvider.GetService<UserManager>();
+                var studioNotifyService = serviceProvider.GetService<StudioNotifyService>();
                 var u = await userManager.GetUserByEmailAsync(migration.Email);
                 await studioNotifyService.MigrationPersonalToDocspaceAsync(u);
                 logger.Debug($"user - {migration.Email} migrated to {alias}");
