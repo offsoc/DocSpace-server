@@ -92,10 +92,10 @@ public class Startup
              .AddBaseDbContextPool<MigrationContext>()
              .AddAutoMapper(BaseStartup.GetAutoMapperProfileAssemblies())
              .AddMemoryCache()
-             .AddSingleton<IEventBus, MockEventBusRabbitMQ>()
              .AddCacheNotify(_configuration)
              .AddDistributedCache(connectionMultiplexer)
-             .AddDistributedLock(_configuration);
+             .AddDistributedLock(_configuration)
+             .AddEventBus(_configuration);
 
         var redisConfiguration = _configuration.GetSection("Redis").Get<RedisConfiguration>();
         var configurationOption = redisConfiguration?.ConfigurationOptions;
