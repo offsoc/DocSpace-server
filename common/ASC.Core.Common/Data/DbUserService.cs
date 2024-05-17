@@ -30,6 +30,7 @@ namespace ASC.Core.Data;
 
 [Scope]
 public class EFUserService(IDbContextFactory<UserDbContext> dbContextFactory,
+        CreatorDbContext creatorDbContext,
         MachinePseudoKeys machinePseudoKeys,
         IMapper mapper)
     : IUserService
@@ -142,7 +143,7 @@ public class EFUserService(IDbContextFactory<UserDbContext> dbContextFactory,
 
     public async Task<UserInfo> GetUserAsync(int tenant, string email)
     {
-        await using var userDbContext = await dbContextFactory.CreateDbContextAsync();
+        await using var userDbContext = creatorDbContext.CreateDbContext<UserDbContext>();
         return await GetUserQuery(userDbContext, tenant)
             .ProjectTo<UserInfo>(mapper.ConfigurationProvider)
             .FirstOrDefaultAsync(r => r.Email == email && !r.Removed);

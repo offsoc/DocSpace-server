@@ -29,6 +29,7 @@ namespace ASC.Core.Data;
 [Scope]
 public class DbTenantService(
     IDbContextFactory<TenantDbContext> dbContextFactory,
+    CreatorDbContext creatorDbContext,
     IDbContextFactory<UserDbContext> userDbContextFactory,
     TenantDomainValidator tenantDomainValidator,
     MachinePseudoKeys machinePseudoKeys,
@@ -152,7 +153,7 @@ public class DbTenantService(
 
     public async Task<Tenant> GetTenantAsync(int id)
     {
-        await using var tenantDbContext = await dbContextFactory.CreateDbContextAsync();
+        await using var tenantDbContext = creatorDbContext.CreateDbContext<TenantDbContext>();
         return await tenantDbContext.Tenants
             .Where(r => r.Id == id)
             .ProjectTo<Tenant>(mapper.ConfigurationProvider)

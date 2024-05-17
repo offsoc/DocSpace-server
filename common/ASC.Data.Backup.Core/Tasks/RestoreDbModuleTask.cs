@@ -77,7 +77,13 @@ public class RestoreDbModuleTask : PortalTaskBase
                 var transactionData = new TransactionData();
                 await ActionInvoker.TryAsync(state => RestoreTable(connection.Fix(), (TableInfo)state, transactionData), table, 5,
                     onAttemptFailure: _ => _columnMapper.Rollback(),
-                    onFailure: error => throw ThrowHelper.CantRestoreTable(table.Name, error));
+                    onFailure: (error) =>
+                    {
+                        if (table.Name != "tenants_tariff") 
+                        {
+                            throw ThrowHelper.CantRestoreTable(table.Name, error);
+                        }
+                    });
 
                 await SetStepCompleted();
                 _logger.DebugRowsInserted(transactionData.RowsInserted, table.Name);

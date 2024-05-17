@@ -48,6 +48,7 @@ using ASC.MessagingSystem.EF.Context;
 using ASC.MigrationFromPersonal.Core;
 using ASC.MigrationFromPersonal.EF;
 using ASC.Notify.Engine;
+using ASC.Web.Studio.Core.Notify;
 using ASC.Webhooks.Core.EF.Context;
 
 using StackExchange.Redis.Extensions.Core.Configuration;
@@ -123,6 +124,7 @@ public class Startup
         _diHelper.TryAdd<RoomLogoValidator>();
         _diHelper.TryAdd<FileValidator>();
         _diHelper.TryAdd<FileSecurity>();
+        _diHelper.TryAdd<StudioNotifyService>();
 
         services.AddHostedService<MigrationService>();
     }

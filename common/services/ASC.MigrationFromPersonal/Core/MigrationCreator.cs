@@ -244,7 +244,8 @@ public class MigrationCreator
                         table.Name == "files_thirdparty_id_mapping" ||
                         table.Name == "core_subscription" ||
                         table.Name == "files_security" ||
-                        table.Name == "tenants_quotarow")
+                        table.Name == "tenants_quotarow"||
+                        table.Name == "tenants_tariff")
                     {
                         continue;
                     }

@@ -51,7 +51,7 @@ public class MigrationService(IServiceProvider serviceProvider,
             migration.Status = MigrationStatus.InWork;
             migration.StartDate = DateTime.Now;
             context.Update(migration);
-           // await context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             try
             {
@@ -67,7 +67,7 @@ public class MigrationService(IServiceProvider serviceProvider,
                 dbContextTenant.Tenants.Where(t=> t.Alias == newAlias && t.Status == TenantStatus.Suspended).ExecuteDelete();
 
                 var migrationRunner = serviceProvider.GetService<MigrationRunner>();
-                var alias = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "", totalSize);
+                (var alias, var tenantId) = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "", totalSize);
             
                 Directory.GetFiles(AppContext.BaseDirectory).Where(f => f.Equals(fileName)).ToList().ForEach(File.Delete);
 
@@ -79,8 +79,12 @@ public class MigrationService(IServiceProvider serviceProvider,
                 migration.Status = MigrationStatus.Success;
                 migration.Alias = alias;
 
+                RegionSettings.SetCurrent(configuration["toRegion"]);
+                var tenantManager = serviceProvider.GetService<TenantManager>();
                 var userManager = serviceProvider.GetService<UserManager>();
                 var studioNotifyService = serviceProvider.GetService<StudioNotifyService>();
+
+                await tenantManager.SetCurrentTenantAsync(tenantId);
                 var u = await userManager.GetUserByEmailAsync(migration.Email);
                 await studioNotifyService.MigrationPersonalToDocspaceAsync(u);
                 logger.Debug($"user - {migration.Email} migrated to {alias}");

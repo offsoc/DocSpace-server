@@ -66,7 +66,7 @@ public class MigrationRunner
         _creatorDbContext = creatorDbContext;
     }
 
-    public async Task<string> RunAsync(string backupFile, string region, string fromAlias, string toAlias, long totalSize)
+    public async Task<(string, int)> RunAsync(string backupFile, string region, string fromAlias, string toAlias, long totalSize)
     {
         _totalSize = totalSize;
         _region = region;
@@ -106,7 +106,7 @@ public class MigrationRunner
         using var dbContextTenantRegion = _creatorDbContext.CreateDbContext<TenantDbContext>(_region);
         var tenantId = columnMapper.GetTenantMapping();
         var tenant = await dbContextTenantRegion.Tenants.SingleAsync(t => t.Id == tenantId);
-        return tenant.Alias;
+        return (tenant.Alias, tenant.Id);
     }
 
     private async Task DoRestoreStorage(IDataReadOperator dataReader, ColumnMapper columnMapper)
