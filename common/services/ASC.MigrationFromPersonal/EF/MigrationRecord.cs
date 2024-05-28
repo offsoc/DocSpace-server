@@ -34,6 +34,7 @@ public class MigrationRecord
     public DateTime EndDate { get; set; }
     public MigrationStatus Status { get; set; }
     public string Alias { get; set; }
+    public TimeSpan MigtationTime { get; set; }
 }
 
 public static class MigrationRecordExtension
@@ -85,6 +86,10 @@ public static class MigrationRecordExtension
                 .HasColumnType("varchar(255)")
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
+
+            entity.Property(e => e.MigtationTime)
+               .HasColumnName("migtation_time")
+               .HasColumnType("time");
         });
     }
 }

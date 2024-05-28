@@ -24,6 +24,8 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
+using System.Diagnostics;
+
 using ASC.Core;
 using ASC.Web.Studio.Core.Notify;
 
@@ -53,11 +55,13 @@ public class MigrationService(IServiceProvider serviceProvider,
             context.Update(migration);
             await context.SaveChangesAsync();
 
+            var sw = new Stopwatch();
             try
             {
                 RegionSettings.SetCurrent(configuration["fromRegion"]);
                 logger.Debug($"user - {migration.Email} start migration");
-                
+
+                sw.Start();
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
                 (var fileName, var newAlias, var totalSize) = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
 
@@ -68,7 +72,7 @@ public class MigrationService(IServiceProvider serviceProvider,
 
                 var migrationRunner = serviceProvider.GetService<MigrationRunner>();
                 (var alias, var tenantId) = await migrationRunner.RunAsync(fileName, configuration["toRegion"], configuration["fromAlias"], "", totalSize);
-            
+                sw.Stop();
                 Directory.GetFiles(AppContext.BaseDirectory).Where(f => f.Equals(fileName)).ToList().ForEach(File.Delete);
 
                 if (Directory.Exists(AppContext.BaseDirectory + "\\temp"))
@@ -98,6 +102,7 @@ public class MigrationService(IServiceProvider serviceProvider,
             {
                 RegionSettings.SetCurrent("");
                 migration.EndDate = DateTime.Now;
+                migration.MigtationTime = new TimeSpan(1,1,1,1);
                 context.Update(migration);
                 await context.SaveChangesAsync();
             }
