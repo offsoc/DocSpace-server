@@ -102,7 +102,7 @@ public class MigrationService(IServiceProvider serviceProvider,
             {
                 RegionSettings.SetCurrent("");
                 migration.EndDate = DateTime.Now;
-                migration.MigtationTime = new TimeSpan(1,1,1,1);
+                migration.MigtationTime = sw.Elapsed;
                 context.Update(migration);
                 await context.SaveChangesAsync();
             }

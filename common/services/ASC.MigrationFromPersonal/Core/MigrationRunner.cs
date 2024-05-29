@@ -185,6 +185,7 @@ public class MigrationRunner
         tenant.CreationDateTime = DateTime.UtcNow;
         tenant.LastModified = DateTime.UtcNow;
         tenant.StatusChanged = DateTime.UtcNow;
+        tenant.PaymentId = string.Empty;
         if (!dbContextUser.Users.Any(q => q.Id == tenant.OwnerId))
         {
 
