@@ -447,7 +447,7 @@ public class MigrationCreator
 
     private async Task<List<IGrouping<string, BackupFileInfo>>> GetFilesGroup(Guid id)
     {
-        var files = (await GetFilesToProcess(id)).ToList();
+        var files = (await GetFilesToProcess(id)).Where(f=> !f.Path.Contains("/thumb.")).ToList();
 
         return files.GroupBy(file => file.Module).ToList();
     }
