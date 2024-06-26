@@ -294,6 +294,11 @@ public class MigrationCreator
                     ClearCommonBunch(data);
                 }
 
+                if (data.TableName == "files_file")
+                {
+                    ChangeThumb(data);
+                }
+
                 await WriteEnrty(data, writer, module);
             }
             catch (MySqlException)
@@ -405,6 +410,14 @@ public class MigrationCreator
                 data.Rows.RemoveAt(i);
                 i--;
             }
+        }
+    }
+
+    private void ChangeThumb(DataTable data)
+    {
+        for (var i = 0; i < data.Rows.Count; i++)
+        {
+            data.Rows[i]["thumb"] = "0";
         }
     }
 
