@@ -475,7 +475,7 @@ public class MigrationCreator
 
         var store = await _storageFactory.GetStorageAsync(_fromTenantId, module);
 
-        var dbFiles = filesDbContext.Files.Where(q => q.CreateBy == id && q.TenantId == _fromTenantId).ToList();
+        var dbFiles = filesDbContext.Files.Where(q => q.CreateBy == id && q.TenantId == _fromTenantId && q.CurrentVersion).ToList();
 
         var tasks = new List<Task>(20);
         foreach (var dbFile in dbFiles)
