@@ -428,9 +428,9 @@ public class MigrationCreator
         foreach (var group in fileGroups)
         {
             _logger.LogDebug($"start backup fileGroup: {group.Key}");
+            var storage = await _storageFactory.GetStorageAsync(_fromTenantId, group.Key);
             foreach (var file in group)
             {
-                var storage = await _storageFactory.GetStorageAsync(_fromTenantId, group.Key);
                 var file1 = file;
                 await ActionInvoker.TryAsync(async (state, logger) =>
                 {
