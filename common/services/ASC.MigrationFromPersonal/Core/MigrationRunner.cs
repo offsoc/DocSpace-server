@@ -37,6 +37,7 @@ public class MigrationRunner
     private readonly ILogger<RestoreDbModuleTask> _logger;
     private readonly CreatorDbContext _creatorDbContext;
     private long _totalSize;
+    private DbTenant _fromTenant;
 
     private string _backupFile;
     private string _region;
@@ -73,15 +74,16 @@ public class MigrationRunner
         _modules = _moduleProvider.AllModules.Where(m => _namesModules.Contains(m.ModuleName)).ToList();
         _backupFile = backupFile;
         var columnMapper = new ColumnMapper();
+
+
+        using var dbContextTenant = _creatorDbContext.CreateDbContext<TenantDbContext>();
+        _fromTenant = dbContextTenant.Tenants.SingleOrDefault(q => q.Alias == fromAlias);
         if (!string.IsNullOrEmpty(toAlias))
         {
-            using var dbContextTenant = _creatorDbContext.CreateDbContext<TenantDbContext>();
-            var fromTenant = dbContextTenant.Tenants.SingleOrDefault(q => q.Alias == fromAlias);
-
             using var dbContextToTenant = _creatorDbContext.CreateDbContext<TenantDbContext>(region);
             var toTenant = dbContextToTenant.Tenants.SingleOrDefault(q => q.Alias == toAlias);
 
-            columnMapper.SetMapping("tenants_tenants", "id", fromTenant.Id, toTenant.Id);
+            columnMapper.SetMapping("tenants_tenants", "id", _fromTenant.Id, toTenant.Id);
             columnMapper.Commit();
         }
 
@@ -116,9 +118,10 @@ public class MigrationRunner
         foreach (var group in fileGroups)
         {
             _logger.Debug($"start restore fileGroup: {group.Key}");
+            var storage = await _storageFactory.GetStorageAsync(columnMapper.GetTenantMapping(), group.Key, _region);
+            var sourceStorage = await _storageFactory.GetStorageAsync(_fromTenant.Id, group.Key);
             foreach (var file in group)
             {
-                var storage = await _storageFactory.GetStorageAsync(columnMapper.GetTenantMapping(), group.Key, _region);
                 var quotaController = storage.QuotaController;
                 storage.SetQuotaController(null);
 
@@ -126,13 +129,15 @@ public class MigrationRunner
                 {
                     var adjustedPath = file.Path;
                     var module = _moduleProvider.GetByStorageModule(file.Module, file.Domain);
-                    if (module == null || module.TryAdjustFilePath(false, columnMapper, ref adjustedPath))
+                    if (module != null)
                     {
-                        var key = file.GetZipKey();
-                        using var stream = dataReader.GetEntry(key);
-
-                        await storage.SaveAsync(file.Domain, adjustedPath, module != null ? module.PrepareData(key, stream, columnMapper) : stream);
+                        using var stream = await sourceStorage.GetReadStreamAsync(file.Domain, file.Path);
+                        await storage.SaveAsync(file.Domain, adjustedPath, stream);
                     }
+                }
+                catch(Exception e)
+                {
+                    _logger.WarningWithException("file is not restored", e);
                 }
                 finally
                 {

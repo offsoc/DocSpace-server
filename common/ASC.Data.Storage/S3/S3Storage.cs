@@ -293,11 +293,9 @@ public class S3Storage(TempStream tempStream,
     public async Task<Uri> SaveAsync(string domain, string path, Guid ownerId, Stream stream, string contentType,
                          string contentDisposition, ACL acl, string contentEncoding = null, int cacheDays = 5)
     {
-        var buffered = await _tempStream.GetBufferedAsync(stream);
-
         if (EnableQuotaCheck(domain))
         {
-            await QuotaController.QuotaUsedCheckAsync(buffered.Length, ownerId);
+            await QuotaController.QuotaUsedCheckAsync(stream.Length, ownerId);
         }
 
         using var client = GetClient();
@@ -312,7 +310,7 @@ public class S3Storage(TempStream tempStream,
             Key = MakePath(domain, path),
             ContentType = mime,
             ServerSideEncryptionMethod = _sse,
-            InputStream = buffered,
+            InputStream = stream,
             AutoCloseStream = false
         };
 
@@ -351,7 +349,7 @@ public class S3Storage(TempStream tempStream,
 
         //await InvalidateCloudFrontAsync(MakePath(domain, path));
 
-        await QuotaUsedAddAsync(domain, buffered.Length, ownerId);
+        await QuotaUsedAddAsync(domain, stream.Length, ownerId);
 
         return await GetUriAsync(domain, path);
     }

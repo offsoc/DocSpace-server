@@ -423,26 +423,7 @@ public class MigrationCreator
 
     private async Task DoMigrationStorage(Guid id, IDataWriteOperator writer)
     {
-        _logger.LogDebug($"start backup storage");
         var fileGroups = await GetFilesGroup(id);
-        foreach (var group in fileGroups)
-        {
-            _logger.LogDebug($"start backup fileGroup: {group.Key}");
-            var storage = await _storageFactory.GetStorageAsync(_fromTenantId, group.Key);
-            foreach (var file in group)
-            {
-                var file1 = file;
-                await ActionInvoker.TryAsync(async (state, logger) =>
-                {
-                    var f = (BackupFileInfo)state;
-                    logger.LogDebug($"start backup file: {f.Path}");
-                    using var fileStream = await storage.GetReadStreamAsync(f.Domain, f.Path);
-                    await writer.WriteEntryAsync(file1.GetZipKey(), fileStream, () => Task.CompletedTask);
-                    logger.LogDebug($"end backup file: {f.Path}");
-                }, file, _logger, 5, onFailure: error => _logger.WarningWithException("file can not backup", error));
-            }
-            _logger.LogDebug($"end backup fileGroup: {group.Key}");
-        }
 
         var restoreInfoXml = new XElement(
             "storage_restore",
@@ -455,12 +436,11 @@ public class MigrationCreator
             restoreInfoXml.WriteTo(tmpFile);
             await writer.WriteEntryAsync(KeyHelper.GetStorageRestoreInfoZipKey(), tmpFile, () => Task.CompletedTask);
         }
-        _logger.LogDebug($"end backup storage");
     }
 
     private async Task<List<IGrouping<string, BackupFileInfo>>> GetFilesGroup(Guid id)
     {
-        var files = (await GetFilesToProcess(id)).Where(f=> !f.Path.Contains("/thumb.")).ToList();
+        var files = (await GetFilesToProcess(id)).Where(f=> !f.Path.Contains("thumb")).ToList();
 
         return files.GroupBy(file => file.Module).ToList();
     }
