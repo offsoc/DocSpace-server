@@ -24,6 +24,10 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
+using ASC.Data.Storage;
+
+using Org.BouncyCastle.Utilities.Collections;
+
 namespace ASC.MigrationFromPersonal.Core;
 
 
@@ -38,6 +42,9 @@ public class MigrationRunner
     private readonly CreatorDbContext _creatorDbContext;
     private long _totalSize;
     private DbTenant _fromTenant;
+    private const int Limit = 10;
+    private readonly List<Task> _tasks = new();
+    private readonly TaskScheduler _scheduler = new ConcurrentExclusiveSchedulerPair(TaskScheduler.Default, Limit).ConcurrentScheduler;
 
     private string _backupFile;
     private string _region;
@@ -120,33 +127,36 @@ public class MigrationRunner
             _logger.Debug($"start restore fileGroup: {group.Key}");
             var storage = await _storageFactory.GetStorageAsync(columnMapper.GetTenantMapping(), group.Key, _region);
             var sourceStorage = await _storageFactory.GetStorageAsync(_fromTenant.Id, group.Key);
+            storage.SetQuotaController(null);
+            var quotaController = storage.QuotaController;
             foreach (var file in group)
             {
-                var quotaController = storage.QuotaController;
-                storage.SetQuotaController(null);
-
-                try
+                var task = new Task(() =>
                 {
-                    var adjustedPath = file.Path;
-                    var module = _moduleProvider.GetByStorageModule(file.Module, file.Domain);
-                    if (module != null)
+                    try
                     {
-                        using var stream = await sourceStorage.GetReadStreamAsync(file.Domain, file.Path);
-                        await storage.SaveAsync(file.Domain, adjustedPath, stream);
+                        var adjustedPath = file.Path;
+                        var module = _moduleProvider.GetByStorageModule(file.Module, file.Domain);
+                        if (module != null)
+                        {
+                            using var stream = sourceStorage.GetReadStreamAsync(file.Domain, file.Path).Result;
+                            storage.SaveAsync(file.Domain, adjustedPath, stream).Wait();
+                        }
                     }
-                }
-                catch(Exception e)
-                {
-                    _logger.WarningWithException("file is not restored", e);
-                }
-                finally
-                {
-                    if (quotaController != null)
+                    catch (Exception e)
                     {
-                        storage.SetQuotaController(quotaController);
+                        _logger.WarningWithException("file is not restored", e);
                     }
-                }
+                });
+                _tasks.Add(task);
+                task.Start(_scheduler);
             }
+            if (quotaController != null)
+            {
+                storage.SetQuotaController(quotaController);
+            }
+            await Task.WhenAll(_tasks.ToArray());
+            _tasks.Clear();
             _logger.Debug($"end restore fileGroup: {group.Key}");
         }
     }
