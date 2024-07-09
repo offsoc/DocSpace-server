@@ -1787,6 +1787,16 @@ public class S3Storage(TempStream tempStream,
             return _response.ResponseStream.Read(buffer, offset, count);
         }
 
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return _response.ResponseStream.ReadAsync(buffer, offset, count, cancellationToken);
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
+        {
+            return _response.ResponseStream.ReadAsync(buffer, cancellationToken);
+        }
+
         public override long Seek(long offset, SeekOrigin origin)
         {
             return _response.ResponseStream.Seek(offset, origin);
