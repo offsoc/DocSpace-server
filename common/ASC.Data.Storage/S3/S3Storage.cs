@@ -1812,9 +1812,34 @@ public class S3Storage(TempStream tempStream,
             _response.ResponseStream.Write(buffer, offset, count);
         }
 
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return _response.ResponseStream.WriteAsync(buffer, offset, count, cancellationToken);
+        }
+
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
+        {
+            return _response.ResponseStream.WriteAsync(buffer, cancellationToken);
+        }
+
+        public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+        {
+            return _response.ResponseStream.CopyToAsync(destination, bufferSize, cancellationToken);
+        }
+
         public override void Flush()
         {
             _response.ResponseStream.Flush();
+        }
+
+        public override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            return _response.ResponseStream.FlushAsync(cancellationToken);
+        }
+
+        public override ValueTask DisposeAsync()
+        {
+            return _response?.ResponseStream?.DisposeAsync() ?? ValueTask.CompletedTask;
         }
 
         protected override void Dispose(bool disposing)
