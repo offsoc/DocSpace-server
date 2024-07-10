@@ -24,10 +24,6 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
-using ASC.Data.Storage;
-
-using Org.BouncyCastle.Utilities.Collections;
-
 namespace ASC.MigrationFromPersonal.Core;
 
 
@@ -42,9 +38,6 @@ public class MigrationRunner
     private readonly CreatorDbContext _creatorDbContext;
     private long _totalSize;
     private DbTenant _fromTenant;
-    private const int Limit = 10;
-    private readonly List<Task> _tasks = new();
-    private readonly TaskScheduler _scheduler = new ConcurrentExclusiveSchedulerPair(TaskScheduler.Default, Limit).ConcurrentScheduler;
 
     private string _backupFile;
     private string _region;
@@ -121,7 +114,8 @@ public class MigrationRunner
     private async Task DoRestoreStorage(IDataReadOperator dataReader, ColumnMapper columnMapper)
     {
         var fileGroups = GetFilesToProcess(dataReader).GroupBy(file => file.Module).ToList();
-
+        var semaphore = new SemaphoreSlim(10);
+        var tasks = new List<Task>();
         foreach (var group in fileGroups)
         {
             _logger.Debug($"start restore fileGroup: {group.Key}");
@@ -131,33 +125,40 @@ public class MigrationRunner
             var quotaController = storage.QuotaController;
             foreach (var file in group)
             {
-                var task = new Task(() =>
-                {
-                    try
-                    {
-                        var adjustedPath = file.Path;
-                        var module = _moduleProvider.GetByStorageModule(file.Module, file.Domain);
-                        if (module != null)
-                        {
-                            using var stream = sourceStorage.GetReadStreamAsync(file.Domain, file.Path).Result;
-                            storage.SaveAsync(file.Domain, adjustedPath, stream).Wait();
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.WarningWithException("file is not restored", e);
-                    }
-                });
-                _tasks.Add(task);
-                task.Start(_scheduler);
+                var task = CopyFileAsync(semaphore, file, columnMapper, sourceStorage, storage);
+                tasks.Add(task);
             }
             if (quotaController != null)
             {
                 storage.SetQuotaController(quotaController);
             }
-            await Task.WhenAll(_tasks.ToArray());
-            _tasks.Clear();
+
+            await Task.WhenAll(tasks.ToArray());
+            tasks.Clear();
             _logger.Debug($"end restore fileGroup: {group.Key}");
+        }
+    }
+
+    private async Task CopyFileAsync(SemaphoreSlim semaphore, BackupFileInfo file, ColumnMapper columnMapper, IDataStore sourceStorage, IDataStore storage)
+    {
+        try
+        {
+            await semaphore.WaitAsync();
+            var adjustedPath = file.Path;
+            var module = _moduleProvider.GetByStorageModule(file.Module, file.Domain);
+            if (module == null || module.TryAdjustFilePath(false, columnMapper, ref adjustedPath))
+            {
+                await using var stream = await sourceStorage.GetReadStreamAsync(file.Domain, file.Path);
+                await storage.SaveAsync(file.Domain, adjustedPath, stream);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.WarningWithException("file is not restored", e);
+        }
+        finally
+        {
+            semaphore.Release();
         }
     }
 
