@@ -888,7 +888,7 @@ public class StudioNotifyService(UserManager userManager,
 
         var displayUserName = userInfo.DisplayUserName(false, displayUserSettingsHelper);
 
-        await messageService.SendAsync(MessageAction.UserSentPasswordChangeInstructions, messageTarget.Create(userInfo.Id), auditEventDate, displayUserName);
+        await messageService.SendAsync(MessageInitiator.System, MessageAction.UserSentPasswordChangeInstructions, messageTarget.Create(userInfo.Id), auditEventDate, displayUserName);
     }
 
     #endregion

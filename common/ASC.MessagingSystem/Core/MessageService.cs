@@ -204,7 +204,7 @@ public class MessageService(
 
     public async Task SendAsync(MessageInitiator initiator, MessageAction action, params string[] description)
     {
-        await SendInitiatorMessageAsync(initiator.ToString(), action, null, description);
+        await SendInitiatorMessageAsync(initiator.ToString(), action, null, null, description);
     }
 
     #endregion
@@ -213,19 +213,24 @@ public class MessageService(
 
     public async Task SendAsync(MessageInitiator initiator, MessageAction action, MessageTarget target, params string[] description)
     {
-        await SendInitiatorMessageAsync(initiator.ToString(), action, target, description);
+        await SendInitiatorMessageAsync(initiator.ToString(), action, target, null, description);
+    }
+
+    public async Task SendAsync(MessageInitiator initiator, MessageAction action, MessageTarget target, DateTime time, params string[] description)
+    {
+        await SendInitiatorMessageAsync(initiator.ToString(), action, target, time, description);
     }
 
     #endregion
 
-    private async Task SendInitiatorMessageAsync(string initiator, MessageAction action, MessageTarget target, params string[] description)
+    private async Task SendInitiatorMessageAsync(string initiator, MessageAction action, MessageTarget target, DateTime? time, params string[] description)
     {
         if (Sender == null)
         {
             return;
         }
 
-        var message = await messageFactory.CreateAsync(Request, initiator, null, action, target, description);
+        var message = await messageFactory.CreateAsync(Request, initiator, time, action, target, description);
         if (!messagePolicy.Check(message))
         {
             return;
