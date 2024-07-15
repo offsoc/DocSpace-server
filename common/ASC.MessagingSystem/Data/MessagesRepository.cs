@@ -24,6 +24,8 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
+using ASC.Core.Common.EF;
+
 namespace ASC.MessagingSystem.Data;
 
 [Singleton(Additional = typeof(MessagesRepositoryExtension))]
@@ -98,7 +100,8 @@ public class MessagesRepository : IDisposable
             }
 
             using var scope = _serviceScopeFactory.CreateScope();
-            await using var ef = await scope.ServiceProvider.GetService<IDbContextFactory<MessagesContext>>().CreateDbContextAsync();
+            var creatorDbContext = scope.ServiceProvider.GetService<CreatorDbContext>();
+            await using var ef = creatorDbContext.CreateDbContext<MessagesContext>();
 
             if ((int)message.Action < 2000)
             {
