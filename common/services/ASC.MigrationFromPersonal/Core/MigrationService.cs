@@ -43,27 +43,27 @@ public class MigrationService(IServiceProvider serviceProvider,
         await using var context = await dbContextFactory.CreateDbContextAsync();
         while (!stoppingToken.IsCancellationRequested)
         {
-            var migration = await context.Migrations.OrderBy(m => m.RequestDate).FirstOrDefaultAsync(m => m.Status == MigrationStatus.Pending);
-            if (migration == null)
+            var email = await context.Migrations.OrderBy(m => m.RequestDate)
+                .Where(m => m.Status == MigrationStatus.Pending).Select(m => m.Email).FirstOrDefaultAsync();
+            if (email == null)
             {
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
                 continue;
             }
 
-            migration.Status = MigrationStatus.InWork;
-            migration.StartDate = DateTime.Now;
-            context.Update(migration);
-            await context.SaveChangesAsync();
+            await context.Migrations.Where(m => m.Email == email)
+                .ExecuteUpdateAsync(m=> m.SetProperty(p => p.Status, MigrationStatus.InWork)
+                    .SetProperty(p => p.StartDate, DateTime.Now));
 
             var sw = new Stopwatch();
             try
             {
                 RegionSettings.SetCurrent(configuration["fromRegion"]);
-                logger.Debug($"user - {migration.Email} start migration");
+                logger.Debug($"user - {email} start migration");
 
                 sw.Start();
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
-                (var fileName, var newAlias, var totalSize) = await migrationCreator.CreateAsync(configuration["fromAlias"], migration.Email, configuration["toRegion"], "");
+                (var fileName, var newAlias, var totalSize) = await migrationCreator.CreateAsync(configuration["fromAlias"], email, configuration["toRegion"], "");
 
                 logger.Debug($"end creator and start runner");
 
@@ -80,31 +80,32 @@ public class MigrationService(IServiceProvider serviceProvider,
                     Directory.Delete(AppContext.BaseDirectory + "\\temp");
                 }
 
-                migration.Status = MigrationStatus.Success;
-                migration.Alias = alias;
-
                 RegionSettings.SetCurrent(configuration["toRegion"]);
                 var tenantManager = serviceProvider.GetService<TenantManager>();
                 var userManager = serviceProvider.GetService<UserManager>();
                 var studioNotifyService = serviceProvider.GetService<StudioNotifyService>();
 
                 await tenantManager.SetCurrentTenantAsync(tenantId);
-                var u = await userManager.GetUserByEmailAsync(migration.Email);
+                var u = await userManager.GetUserByEmailAsync(email);
                 await studioNotifyService.MigrationPersonalToDocspaceAsync(u);
-                logger.Debug($"user - {migration.Email} migrated to {alias}");
+                logger.Debug($"user - {email} migrated to {alias}");
+                await context.Migrations.Where(m => m.Email == email)
+                    .ExecuteUpdateAsync(m => m.SetProperty(p => p.Status, MigrationStatus.Success)
+                        .SetProperty(p => p.EndDate, DateTime.Now)
+                        .SetProperty(p => p.Alias, alias)
+                        .SetProperty(p => p.MigtationTime, sw.Elapsed));
             }
             catch (Exception e)
             {
-                migration.Status = MigrationStatus.Error;
-                logger.ErrorWithException($"user - {migration.Email} error", e);
+                await context.Migrations.Where(m => m.Email == email)
+                    .ExecuteUpdateAsync(m => m.SetProperty(p => p.Status, MigrationStatus.Error)
+                        .SetProperty(p => p.MigtationTime, sw.Elapsed)
+                        .SetProperty(p => p.EndDate, DateTime.Now));
+                logger.ErrorWithException($"user - {email} error", e);
             }
             finally
             {
                 RegionSettings.SetCurrent("");
-                migration.EndDate = DateTime.Now;
-                migration.MigtationTime = sw.Elapsed;
-                context.Update(migration);
-                await context.SaveChangesAsync();
             }
         }
     }
