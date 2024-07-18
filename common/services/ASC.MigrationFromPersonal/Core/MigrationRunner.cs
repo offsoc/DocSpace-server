@@ -202,6 +202,7 @@ public class MigrationRunner
         tenant.LastModified = DateTime.UtcNow;
         tenant.StatusChanged = DateTime.UtcNow;
         tenant.PaymentId = string.Empty;
+        tenant.TimeZone = TimeZoneInfo.Utc.Id;
         if (!dbContextUser.Users.Any(q => q.Id == tenant.OwnerId))
         {
 
