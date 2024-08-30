@@ -24,6 +24,8 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
+using Amazon.Runtime;
+
 namespace ASC.MigrationFromPersonal;
 
 [Transient]
@@ -49,6 +51,7 @@ public class MigrationCreator
     private string _toAlias;
     private string _fromAlias;
     private int _fromTenantId;
+    public string _AWSRegion;
     private readonly object _locker = new object();
     private readonly int _limit = 1000;
     private readonly List<ModuleName> _namesModules = new List<ModuleName>()
@@ -93,9 +96,9 @@ public class MigrationCreator
         _apiSystemHelper = apiSystemHelper;
     }
 
-    public async Task<(string, string, long)> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias)
+    public async Task<(string, string, long)> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias, string AWSRegion)
     {
-        Init(fromAlias, mail, toRegion, toAlias);
+        Init(fromAlias, mail, toRegion, toAlias, AWSRegion);
 
         var id = GetUserId();
         await CheckTotalSizeAsync(id);
@@ -110,13 +113,14 @@ public class MigrationCreator
         return (fileName, NewAlias, _totalSize);
     }
 
-    private void Init(string fromAlias, string mail, string toRegion, string toAlias)
+    private void Init(string fromAlias, string mail, string toRegion, string toAlias, string AWSRegion)
     {
         _pathToSave = "";
         _toRegion = toRegion;
         _mail = mail;
         _fromAlias = fromAlias;
         _toAlias = toAlias;
+        _AWSRegion = AWSRegion;
 
         using var dbContextTenant = _creatorDbContext.CreateDbContext<TenantDbContext>();
         var tenant = dbContextTenant.Tenants.SingleOrDefault(q => q.Alias == _fromAlias);
@@ -381,6 +385,8 @@ public class MigrationCreator
         dbTenant.LastModified = DateTime.Now;
         await dbContextTenant.Tenants.AddAsync(dbTenant);
         await dbContextTenant.SaveChangesAsync();
+
+        await _apiSystemHelper.AddTenantToCacheAsync(NewAlias, _AWSRegion);
     }
 
     private string RemoveInvalidCharacters(string alias)

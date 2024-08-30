@@ -101,7 +101,7 @@ public class MigrationRunner
             await DoRestoreStorage(dataReader, columnMapper);
 
             SetQuotarow(columnMapper.GetTenantMapping());
-            SetTenantActiveaAndTenantOwner(columnMapper.GetTenantMapping());
+            SetTenantActiveAndTenantOwner(columnMapper.GetTenantMapping());
             SetAdmin(columnMapper.GetTenantMapping());
             await SetTariffAsync(columnMapper.GetTenantMapping());
         }
@@ -190,7 +190,7 @@ public class MigrationRunner
         coreDbContext.SaveChanges();
     }
 
-    private void SetTenantActiveaAndTenantOwner(int tenantId)
+    private void SetTenantActiveAndTenantOwner(int tenantId)
     {
         using var dbContextTenant = _creatorDbContext.CreateDbContext<TenantDbContext>(_region);
         using var dbContextUser = _creatorDbContext.CreateDbContext<UserDbContext>(_region);
@@ -205,7 +205,6 @@ public class MigrationRunner
         tenant.TimeZone = TimeZoneInfo.Utc.Id;
         if (!dbContextUser.Users.Any(q => q.Id == tenant.OwnerId))
         {
-
             var user = dbContextUser.Users.Single(u => u.TenantId == tenantId);
             tenant.OwnerId = user.Id;
             _logger.Debug($"set ownerId {user.Id}");

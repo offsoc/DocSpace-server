@@ -36,8 +36,7 @@ public class MigrationService(IServiceProvider serviceProvider,
     IConfiguration configuration,
     IDbContextFactory<MigrationContext> dbContextFactory,
     ILogger<MigrationService> logger,
-    CreatorDbContext creatorDbContext,
-    ApiSystemHelper apiSystemHelper
+    CreatorDbContext creatorDbContext
     ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -66,7 +65,7 @@ public class MigrationService(IServiceProvider serviceProvider,
 
                 sw.Start();
                 var migrationCreator = serviceProvider.GetService<MigrationCreator>();
-                (var fileName, var newAlias, var totalSize) = await migrationCreator.CreateAsync(configuration["fromAlias"], email, configuration["toRegion"], "");
+                (var fileName, var newAlias, var totalSize) = await migrationCreator.CreateAsync(configuration["fromAlias"], email, configuration["toRegion"], "", AWSRegion);
 
                 logger.Debug($"end creator and start runner");
 
@@ -91,7 +90,6 @@ public class MigrationService(IServiceProvider serviceProvider,
                 await tenantManager.SetCurrentTenantAsync(tenantId);
                 var u = await userManager.GetUserByEmailAsync(email);
                 await studioNotifyService.MigrationPersonalToDocspaceAsync(u);
-                await apiSystemHelper.AddTenantToCacheAsync(alias, AWSRegion);
                 logger.Debug($"user - {email} migrated to {alias}");
                 await context.Migrations.Where(m => m.Email == email)
                     .ExecuteUpdateAsync(m => m.SetProperty(p => p.Status, MigrationStatus.Success)
