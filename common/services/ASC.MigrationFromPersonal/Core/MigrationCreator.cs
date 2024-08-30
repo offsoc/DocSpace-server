@@ -297,7 +297,7 @@ public class MigrationCreator
                 {
                     _logger.LogDebug($"tenants_tenants count - {counts}");
                     _logger.LogDebug($"tenants_tenants rows - {data.Rows.Count}");
-                    ChangeAlias(data);
+                    await ChangeAliasAsync(data);
                     ChangeName(data);
                     ChangeIndustry(data);
                 }
@@ -333,7 +333,7 @@ public class MigrationCreator
         await writer.WriteEntryAsync(KeyHelper.GetTableZipKey(module, data.TableName), file, () => Task.CompletedTask);
     }
 
-    private async void ChangeAlias(DataTable data)
+    private async Task ChangeAliasAsync(DataTable data)
     {
         NewAlias = _userName.ToLower();
         while (true)
