@@ -280,7 +280,7 @@ public class MigrationCreator
                     dataAdapter.SelectCommand = module.CreateSelectCommand(connection.Fix(), _fromTenantId, table, _limit, offset, id).WithTimeout(600);
                     if (data.TableName == "tenants_tenants")
                     {
-                        _logger.LogDebug($"tenants_tenants select - {dataAdapter.SelectCommand}");
+                        _logger.LogDebug($"tenants_tenants select - {dataAdapter.SelectCommand.CommandText}");
                     }
                     counts = ((DbDataAdapter)dataAdapter).Fill(data);
                     offset += _limit;
