@@ -278,6 +278,10 @@ public class MigrationCreator
                 {
                     var dataAdapter = _dbFactory.CreateDataAdapter();
                     dataAdapter.SelectCommand = module.CreateSelectCommand(connection.Fix(), _fromTenantId, table, _limit, offset, id).WithTimeout(600);
+                    if (data.TableName == "tenants_tenants")
+                    {
+                        _logger.LogDebug($"tenants_tenants select - {dataAdapter.SelectCommand}");
+                    }
                     counts = ((DbDataAdapter)dataAdapter).Fill(data);
                     offset += _limit;
                 } while (counts == _limit);
@@ -291,6 +295,8 @@ public class MigrationCreator
 
                 if (data.TableName == "tenants_tenants")
                 {
+                    _logger.LogDebug($"tenants_tenants count - {counts}");
+                    _logger.LogDebug($"tenants_tenants rows - {data.Rows.Count}");
                     ChangeAlias(data);
                     ChangeName(data);
                     ChangeIndustry(data);
