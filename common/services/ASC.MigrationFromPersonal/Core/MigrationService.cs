@@ -36,11 +36,14 @@ public class MigrationService(IServiceProvider serviceProvider,
     IConfiguration configuration,
     IDbContextFactory<MigrationContext> dbContextFactory,
     ILogger<MigrationService> logger,
-    CreatorDbContext creatorDbContext) : BackgroundService
+    CreatorDbContext creatorDbContext,
+    ApiSystemHelper apiSystemHelper
+    ) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await using var context = await dbContextFactory.CreateDbContextAsync();
+        var AWSRegion = configuration["AWSRegion"];
         while (!stoppingToken.IsCancellationRequested)
         {
             var email = await context.Migrations.OrderBy(m => m.RequestDate)
@@ -88,6 +91,7 @@ public class MigrationService(IServiceProvider serviceProvider,
                 await tenantManager.SetCurrentTenantAsync(tenantId);
                 var u = await userManager.GetUserByEmailAsync(email);
                 await studioNotifyService.MigrationPersonalToDocspaceAsync(u);
+                await apiSystemHelper.AddTenantToCacheAsync(alias, AWSRegion);
                 logger.Debug($"user - {email} migrated to {alias}");
                 await context.Migrations.Where(m => m.Email == email)
                     .ExecuteUpdateAsync(m => m.SetProperty(p => p.Status, MigrationStatus.Success)

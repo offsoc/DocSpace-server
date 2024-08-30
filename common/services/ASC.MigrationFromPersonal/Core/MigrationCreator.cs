@@ -37,6 +37,7 @@ public class MigrationCreator
     private readonly ModuleProvider _moduleProvider;
     private readonly IMapper _mapper;
     private readonly CreatorDbContext _creatorDbContext;
+    private readonly ApiSystemHelper _apiSystemHelper;
     private readonly ILogger<MigrationCreator> _logger;
     private long _totalSize;
 
@@ -77,7 +78,8 @@ public class MigrationCreator
         ModuleProvider moduleProvider,
         IMapper mapper,
         CreatorDbContext сreatorDbContext,
-        ILogger<MigrationCreator> logger)
+        ILogger<MigrationCreator> logger,
+        ApiSystemHelper apiSystemHelper)
     {
         _tenantDomainValidator = tenantDomainValidator;
         _tempStream = tempStream;
@@ -88,6 +90,7 @@ public class MigrationCreator
         _mapper = mapper;
         _creatorDbContext = сreatorDbContext;
         _logger = logger;
+        _apiSystemHelper = apiSystemHelper;
     }
 
     public async Task<(string, string, long)> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias)
@@ -322,7 +325,6 @@ public class MigrationCreator
 
     private async void ChangeAlias(DataTable data)
     {
-        var aliases = GetAliases();
         NewAlias = _userName.ToLower();
         while (true)
         {
@@ -331,9 +333,12 @@ public class MigrationCreator
                 NewAlias = RemoveInvalidCharacters(NewAlias);
                 _tenantDomainValidator.ValidateDomainLength(NewAlias);
                 _tenantDomainValidator.ValidateDomainCharacters(NewAlias);
-                if (aliases.Contains(NewAlias))
+
+                var sameAliasTenants = await _apiSystemHelper.FindTenantsInCacheAsync(NewAlias);
+
+                if (sameAliasTenants != null)
                 {
-                    throw new Exception($"Alias {NewAlias} is busy");
+                    throw new TenantAlreadyExistsException("Address busy.", sameAliasTenants);
                 }
                 break;
             }
@@ -381,14 +386,6 @@ public class MigrationCreator
     private string RemoveInvalidCharacters(string alias)
     {
         return Regex.Replace(alias, "[^a-z0-9]", "", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-    }
-
-    private List<string> GetAliases()
-    {
-        using var dbContext = _creatorDbContext.CreateDbContext<TenantDbContext>(_toRegion);
-        var tenants = dbContext.Tenants.Select(t => t.Alias).ToList();
-        var forbidens = dbContext.TenantForbiden.Select(tf => tf.Address).ToList();
-        return tenants.Union(forbidens).Select(t=> t.ToLower()).ToList();
     }
 
     private void ChangeName(DataTable data)

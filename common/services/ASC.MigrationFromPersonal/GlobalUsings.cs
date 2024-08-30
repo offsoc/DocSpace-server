@@ -46,6 +46,7 @@ global using ASC.Data.Storage.DataOperators;
 global using ASC.Files.Core.EF;
 global using ASC.MigrationFromPersonal.Core;
 global using ASC.MigrationFromPersonal.EF;
+global using ASC.Web.Core.Helpers;
 
 global using AutoMapper;
 global using AutoMapper.QueryableExtensions;
