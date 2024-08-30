@@ -24,7 +24,7 @@
 // content are licensed under the terms of the Creative Commons Attribution-ShareAlike 4.0
 // International. See the License terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
 
-using Amazon.Runtime;
+using ASC.Core;
 
 namespace ASC.MigrationFromPersonal;
 
@@ -41,6 +41,7 @@ public class MigrationCreator
     private readonly CreatorDbContext _creatorDbContext;
     private readonly ApiSystemHelper _apiSystemHelper;
     private readonly ILogger<MigrationCreator> _logger;
+    private readonly CoreBaseSettings _coreBaseSettings;
     private long _totalSize;
 
     private List<IModuleSpecifics> _modules;
@@ -82,7 +83,8 @@ public class MigrationCreator
         IMapper mapper,
         CreatorDbContext сreatorDbContext,
         ILogger<MigrationCreator> logger,
-        ApiSystemHelper apiSystemHelper)
+        ApiSystemHelper apiSystemHelper,
+        CoreBaseSettings coreBaseSettings)
     {
         _tenantDomainValidator = tenantDomainValidator;
         _tempStream = tempStream;
@@ -94,6 +96,7 @@ public class MigrationCreator
         _creatorDbContext = сreatorDbContext;
         _logger = logger;
         _apiSystemHelper = apiSystemHelper;
+        _coreBaseSettings = coreBaseSettings;
     }
 
     public async Task<(string, string, long)> CreateAsync(string fromAlias, string mail, string toRegion, string toAlias, string AWSRegion)
@@ -392,7 +395,8 @@ public class MigrationCreator
         await dbContextTenant.Tenants.AddAsync(dbTenant);
         await dbContextTenant.SaveChangesAsync();
 
-        await _apiSystemHelper.AddTenantToCacheAsync(NewAlias, _AWSRegion);
+        var tenantDomain = $"{NewAlias}.{_coreBaseSettings.Basedomain}";
+        await _apiSystemHelper.AddTenantToCacheAsync(tenantDomain, _AWSRegion);
     }
 
     private string RemoveInvalidCharacters(string alias)
