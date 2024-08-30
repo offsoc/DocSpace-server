@@ -354,7 +354,7 @@ public class MigrationCreator
                 }
                 _logger.LogDebug(ex.Message);
             }
-            catch (Exception ex)
+            catch (TenantAlreadyExistsException ex)
             {
                 var last = NewAlias.Substring(NewAlias.Length - 1);
                 if (int.TryParse(last, out var lastNumber))
