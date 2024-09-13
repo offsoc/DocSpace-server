@@ -473,15 +473,12 @@ public class MigrationCreator
         var tasks = new List<Task>(20);
         foreach (var dbFile in dbFiles)
         {
-            if (tasks.Count != 20)
-            {
-                tasks.Add(FindFiles(files, store, dbFile, module));
-            }
-            else
+            if (tasks.Count == 20)
             {
                 Task.WaitAll(tasks.ToArray());
                 tasks.Clear();
             }
+            tasks.Add(FindFiles(files, store, dbFile, module));
         }
         Task.WaitAll(tasks.ToArray());
         return files.Distinct();
