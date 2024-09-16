@@ -80,7 +80,7 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
                         logger.Warning($"fromTenant not found - {configuration["fromAlias"]}");
                         continue;
                     }
-                    var user = await dbContextUser.Users.SingleOrDefaultAsync(q => q.Email == migration.Email && q.TenantId == fromTenant.Id);
+                    var user = await dbContextUser.Users.SingleOrDefaultAsync(q => q.Email == migration.Email && q.TenantId == fromTenant.Id && !q.Removed);
                     if (user == null)
                     {
                         logger.Warning($"user not found - email:{migration.Email}, tenant:{fromTenant.Id}");
