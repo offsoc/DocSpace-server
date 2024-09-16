@@ -45,6 +45,7 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
             {
                 RegionSettings.SetCurrent(configuration["toRegion"]);
                 using var dbContextFiles = creatorDbContext.CreateDbContext<FilesDbContext>(configuration["toRegion"]);
+                logger.LogDebug($"start alias - {migration.Alias}");
 
                 var tenant = await dbContextFiles.Tenants.SingleOrDefaultAsync(q => q.Alias == migration.Alias);
                 if (tenant == null)
@@ -90,7 +91,7 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
                     using var dbContextFilesFromRegion = creatorDbContext.CreateDbContext<FilesDbContext>(configuration["fromRegion"]);
                     foreach (var file in notFoundFiles)
                     {
-                        logger.Debug($"try file - title:{file.Title} createBy:{user.Id} tenant:{fromTenant.Id} contentLength:{file.ContentLength}");
+                        logger.Debug($"try find file - title:{file.Title} createBy:{user.Id} tenant:{fromTenant.Id} contentLength:{file.ContentLength}");
                         var f = await dbContextFilesFromRegion.Files.SingleOrDefaultAsync(q => q.Title == file.Title && q.CreateBy == user.Id && q.TenantId == fromTenant.Id && q.ContentLength == file.ContentLength && q.Version == file.Version && q.Comment == file.Comment);
                         if (f == null)
                         {
@@ -114,6 +115,11 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
                         }
                     }
                 }
+                else
+                {
+                    logger.LogDebug($"all files found");
+                }
+                logger.LogDebug($"end alias - {migration.Alias}");
             }
             catch(Exception e)
             {
