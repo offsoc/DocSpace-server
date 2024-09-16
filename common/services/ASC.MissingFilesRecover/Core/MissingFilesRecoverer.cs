@@ -90,13 +90,14 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
                     using var dbContextFilesFromRegion = creatorDbContext.CreateDbContext<FilesDbContext>(configuration["fromRegion"]);
                     foreach (var file in notFoundFiles)
                     {
+                        logger.Debug($"try file - title:{file.Title} createBy:{user.Id} tenant:{fromTenant.Id} contentLength:{file.ContentLength}");
                         var f = await dbContextFilesFromRegion.Files.SingleOrDefaultAsync(q => q.Title == file.Title && q.CreateBy == user.Id && q.TenantId == fromTenant.Id && q.ContentLength == file.ContentLength);
                         if (f == null)
                         {
                             logger.Warning($"file like {file.Id} not found");
                             continue;
                         }
-                        var filePaths = await fromStorage.ListFilesRelativeAsync(string.Empty, $"\\{GetUniqFileDirectory(f.Id)}", "*.*", true).ToListAsync();
+                        var filePaths = await fromStorage.ListFilesRelativeAsync(string.Empty, $"\\{GetUniqFileDirectory(f.Id)}", "*.*", true).Where(q=> !q.Contains("thumb")).ToListAsync();
 
                         if (!filePaths.Any())
                         {
