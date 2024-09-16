@@ -59,7 +59,8 @@ try
     var app = builder.Build();
 
     startup.Configure(app, app.Environment);
-    await app.RunWithTasksAsync();
+    var missingFilesRecoverer = app.Services.GetService<MissingFilesRecoverer>();
+    await missingFilesRecoverer.ExecuteAsync();
 }
 catch (Exception ex)
 {

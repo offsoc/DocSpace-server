@@ -28,25 +28,17 @@ using System.Threading.Channels;
 
 using ASC.Api.Core;
 using ASC.Api.Core.Core;
-using ASC.Common;
 using ASC.Common.Logging;
-using ASC.Core.Common.EF;
-using ASC.Core.Common.EF.Context;
 using ASC.Core.Common.Hosting;
 using ASC.Core.Common.Notify.Engine;
 using ASC.Core.Common.Quota;
 using ASC.Core.Notify.Socket;
 using ASC.Data.Backup.EF.Context;
-using ASC.Data.Storage;
-using ASC.EventBus.Abstractions;
 using ASC.EventBus.Extensions.Logger;
 using ASC.Feed.Context;
-using ASC.Files.Core.EF;
 using ASC.Files.Core.Security;
 using ASC.Files.Core.VirtualRooms;
 using ASC.MessagingSystem.EF.Context;
-using ASC.MigrationFromPersonal.Core;
-using ASC.MigrationFromPersonal.EF;
 using ASC.Notify.Engine;
 using ASC.Web.Studio.Core.Notify;
 using ASC.Webhooks.Core.EF.Context;
@@ -116,17 +108,13 @@ public class Startup
         services.AddHostedService<SocketService>();
 
         _diHelper.Configure(services);
-
-        _diHelper.TryAdd<MigrationCreator>();
-        _diHelper.TryAdd<MigrationRunner>();
-        _diHelper.TryAdd<MigrationService>();
+;
+        _diHelper.TryAdd<MissingFilesRecoverer>();
         _diHelper.TryAdd<QuotaSocketManager>();
         _diHelper.TryAdd<RoomLogoValidator>();
         _diHelper.TryAdd<FileValidator>();
         _diHelper.TryAdd<FileSecurity>();
         _diHelper.TryAdd<StudioNotifyService>();
-
-        services.AddHostedService<MigrationService>();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

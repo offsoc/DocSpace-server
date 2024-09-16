@@ -52,7 +52,8 @@ public class SettingsManager(
     ILogger<SettingsManager> logger,
     AuthContext authContext,
     TenantManager tenantManager,
-    IDbContextFactory<WebstudioDbContext> dbContextFactory)
+    IDbContextFactory<WebstudioDbContext> dbContextFactory,
+    CreatorDbContext creatorDbContext)
 {
     private static readonly TimeSpan _expirationTimeout = TimeSpan.FromMinutes(5);
     private readonly ICache _cache = dbSettingsManagerCache.Cache;
@@ -175,7 +176,7 @@ public class SettingsManager(
 
     private async Task<T> LoadАFromDbAsync<T>(int tenantId, Guid userId, T def, string key) where T : class, ISettings<T>
     {
-        await using var context = await dbContextFactory.CreateDbContextAsync();
+        await using var context = creatorDbContext.CreateDbContext<WebstudioDbContext>();
         var result = await Queries.DataAsync(context, tenantId, def.ID, userId);
 
         var settings = result != null ? Deserialize<T>(result) : def;

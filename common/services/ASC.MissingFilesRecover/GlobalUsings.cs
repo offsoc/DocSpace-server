@@ -26,8 +26,6 @@
 
 global using System.Data;
 global using System.Data.Common;
-global using System.Text.RegularExpressions;
-global using System.Xml.Linq;
 
 global using ASC.Api.Core.Extensions;
 global using ASC.Common;
@@ -35,23 +33,12 @@ global using ASC.Common.Log;
 global using ASC.Core.Common.EF;
 global using ASC.Core.Common.EF.Context;
 global using ASC.Core.Common.EF.Model;
-global using ASC.Core.Tenants;
-global using ASC.Core.Users;
-global using ASC.Data.Backup.Extensions;
 global using ASC.Data.Backup.Tasks;
-global using ASC.Data.Backup.Tasks.Data;
 global using ASC.Data.Backup.Tasks.Modules;
 global using ASC.Data.Storage;
-global using ASC.Data.Storage.DataOperators;
 global using ASC.Files.Core.EF;
 global using ASC.MigrationFromPersonal.Core;
 global using ASC.MigrationFromPersonal.EF;
-global using ASC.Web.Core.Helpers;
-
-global using AutoMapper;
-global using AutoMapper.QueryableExtensions;
 
 global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Hosting.WindowsServices;
-
-global using MySql.Data.MySqlClient;

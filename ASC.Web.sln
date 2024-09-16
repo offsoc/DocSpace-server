@@ -89,7 +89,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.ApiSystem", "common\ser
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Migration.Core", "common\ASC.Migration\ASC.Migration.Core.csproj", "{D488CAAB-EAEC-4059-9780-B82C4B9E767F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASC.MigrationFromPersonal", "common\services\ASC.MigrationFromPersonal\ASC.MigrationFromPersonal.csproj", "{06A34BB0-CA73-4F4C-80DA-5A19F38F016F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.MissingFilesRecover", "common\services\ASC.MissingFilesRecover\ASC.MissingFilesRecover.csproj", "{06A34BB0-CA73-4F4C-80DA-5A19F38F016F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

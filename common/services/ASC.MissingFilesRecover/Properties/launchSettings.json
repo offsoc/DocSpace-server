@@ -5,7 +5,7 @@
       "launchBrowser": false,
       "environmentVariables": {
         "$STORAGE_ROOT": "../../../../Data",
-        "log__name": "migrationFromPersonal",
+        "log__name": "missingFilesRecover",
         "log__dir": "../../../../Logs",
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:7777"
@@ -16,7 +16,7 @@
       "launchBrowser": false,
       "environmentVariables": {
         "$STORAGE_ROOT": "../../../../Data",
-        "log__name": "migrationFromPersonal",
+        "log__name": "missingFilesRecover",
         "log__dir": "../../../../Logs",
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_URLS": "http://localhost:7777"

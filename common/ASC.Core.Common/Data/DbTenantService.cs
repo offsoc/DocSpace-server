@@ -258,7 +258,7 @@ public class DbTenantService(
 
     public byte[] GetTenantSettings(int tenant, string key)
     {
-        using var tenantDbContext = dbContextFactory.CreateDbContext();
+        using var tenantDbContext = creatorDbContext.CreateDbContext<TenantDbContext>();
         return Queries.SettingValue(tenantDbContext, tenant, key);
     }
 
