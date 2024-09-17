@@ -91,8 +91,8 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
                     using var dbContextFilesFromRegion = creatorDbContext.CreateDbContext<FilesDbContext>(configuration["fromRegion"]);
                     foreach (var file in notFoundFiles)
                     {
-                        logger.Debug($"try find file - title:{file.Title} createBy:{user.Id} tenant:{fromTenant.Id} contentLength:{file.ContentLength}");
-                        var f = await dbContextFilesFromRegion.Files.SingleOrDefaultAsync(q => q.Title == file.Title && q.CreateBy == user.Id && q.TenantId == fromTenant.Id && q.ContentLength == file.ContentLength && q.Version == file.Version && q.Comment == file.Comment);
+                        logger.Debug($"try find file - title:{file.Title} createBy:{user.Id} tenant:{fromTenant.Id} contentLength:{file.ContentLength} version:{file.Version} comment: {file.Comment} create_on: {file.CreateOn}");
+                        var f = await dbContextFilesFromRegion.Files.SingleOrDefaultAsync(q => q.Title == file.Title && q.CreateBy == user.Id && q.TenantId == fromTenant.Id && q.ContentLength == file.ContentLength && q.Version == file.Version && q.Comment == file.Comment && q.CreateOn == file.CreateOn);
                         if (f == null)
                         {
                             logger.Warning($"file like {file.Id} not found");
