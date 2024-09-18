@@ -99,7 +99,7 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
                             logger.Warning($"file like {file.Id} not found");
                             continue;
                         }
-                        var filePaths = await fromStorage.ListFilesRelativeAsync(string.Empty, $"\\{GetUniqFileDirectory(f.Id)}", "*.*", true).Where(q=> !q.Contains("thumb")).ToListAsync();
+                        var filePaths = await fromStorage.ListFilesRelativeAsync(string.Empty, $"\\{GetUniqFileDirectory(f.Id)}", "*", true).Where(q=> !q.Contains("thumb")).ToListAsync();
 
                         if (!filePaths.Any())
                         {
@@ -132,7 +132,7 @@ public class MissingFilesRecoverer(IDbContextFactory<MigrationContext> dbContext
 
     private async Task FindFiles(List<DbFile> list, IDataStore store, DbFile dbFile)
     {
-        var any = await store.ListFilesRelativeAsync(string.Empty, $"\\{GetUniqFileDirectory(dbFile.Id)}", "*.*", true).AnyAsync();
+        var any = await store.ListFilesRelativeAsync(string.Empty, $"\\{GetUniqFileDirectory(dbFile.Id)}", "*", true).AnyAsync();
 
         if (!any)
         {
