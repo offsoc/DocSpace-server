@@ -104,7 +104,7 @@ public class MigrationCreator
         Init(fromAlias, mail, toRegion, toAlias, AWSRegion);
 
         var id = GetUserId();
-        await CheckTotalSizeAsync(id);
+        //await CheckTotalSizeAsync(id);
         CheckCountManager();
         var fileName = _userName + ".tar.gz";
         var path = Path.Combine(_pathToSave, fileName);
