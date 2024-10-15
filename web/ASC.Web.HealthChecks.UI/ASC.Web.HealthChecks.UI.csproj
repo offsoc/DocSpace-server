@@ -6,6 +6,7 @@
 	  <ImplicitUsings>enable</ImplicitUsings>
 	  <LangVersion>12</LangVersion>
 	  <NoWarn>AD0001</NoWarn>
+	  <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
   </PropertyGroup>
 
   <ItemGroup>
