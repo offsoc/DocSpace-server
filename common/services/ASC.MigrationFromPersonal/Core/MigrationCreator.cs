@@ -303,6 +303,7 @@ public class MigrationCreator
                     await ChangeAliasAsync(data);
                     ChangeName(data);
                     ChangeIndustry(data);
+                    ClearSpam(data);
                 }
 
                 if (data.TableName == "files_bunch_objects")
@@ -313,6 +314,11 @@ public class MigrationCreator
                 if (data.TableName == "files_file")
                 {
                     ChangeThumb(data);
+                }
+
+                if (data.TableName == "core_user")
+                {
+                    AddSpam(data);
                 }
 
                 await WriteEnrty(data, writer, module);
@@ -432,6 +438,20 @@ public class MigrationCreator
         {
             data.Rows[i]["thumb"] = "0";
         }
+    }
+    
+    private void AddSpam(DataTable data)
+    {
+        data.Columns.Add("spam");
+        for (var i = 0; i < data.Rows.Count; i++)
+        {
+            data.Rows[i]["spam"] = "1";
+        }
+    }
+
+    private void ClearSpam(DataTable data)
+    {
+        data.Columns.Remove("spam");
     }
 
     private async Task DoMigrationStorage(Guid id, IDataWriteOperator writer)
