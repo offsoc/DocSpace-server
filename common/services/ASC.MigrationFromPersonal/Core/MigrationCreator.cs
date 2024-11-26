@@ -298,8 +298,6 @@ public class MigrationCreator
 
                 if (data.TableName == "tenants_tenants")
                 {
-                    _logger.LogDebug($"tenants_tenants count - {counts}");
-                    _logger.LogDebug($"tenants_tenants rows - {data.Rows.Count}");
                     await ChangeAliasAsync(data);
                     ChangeName(data);
                     ChangeIndustry(data);
@@ -451,7 +449,14 @@ public class MigrationCreator
 
     private void ClearSpam(DataTable data)
     {
-        data.Columns.Remove("spam");
+        try
+        {
+            data.Columns.Remove("spam");
+        }
+        catch(Exception e)
+        {
+
+        }
     }
 
     private async Task DoMigrationStorage(Guid id, IDataWriteOperator writer)
