@@ -31,6 +31,8 @@ import com.asc.transfer.configuration.BatchProcessingConfiguration;
 import com.asc.transfer.entity.ClientDynamoEntity;
 import com.asc.transfer.entity.ClientEntity;
 import com.asc.transfer.entity.ScopeEntity;
+import com.asc.transfer.policy.DynamoDbLargeItemSkipListener;
+import com.asc.transfer.policy.DynamoDbLargeItemSkipPolicy;
 import com.asc.transfer.reader.EnrichedClientItemReader;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -242,6 +244,9 @@ public class ClientTransferJob {
         .reader(enrichedClientReader)
         .processor(compositeProcessor())
         .writer(dynamoClientWriter(tableName, enhancedClient))
+        .faultTolerant()
+        .skipPolicy(new DynamoDbLargeItemSkipPolicy())
+        .listener(new DynamoDbLargeItemSkipListener())
         .build();
   }
 
