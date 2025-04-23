@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.199.0",
-    "axios": "^0.28.0",
+    "axios": "^0.30.0",
     "date-and-time": "^2.4.1",
     "express": "^4.21.2",
     "form-data": "^3.0.0",
