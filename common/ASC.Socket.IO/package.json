@@ -9,7 +9,7 @@
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.199.0",
     "@socket.io/redis-adapter": "^8.3.0",
-    "axios": "0.28.0",
+    "axios": "0.30.0",
     "connect-redis": "~7.1.1",
     "cookie-parser": "~1.4.6",
     "date-and-time": "^2.4.1",
